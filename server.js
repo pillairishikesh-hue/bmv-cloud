@@ -8,7 +8,7 @@ app.use(express.json());
 
 
 // FIXED: Direct shard format that completely avoids the local DNS SRV validation layer
-const mongoURI = "mongodb+srv://pillairishikesh_db_user:<BMVPass2026>@cluster0.pqg1cd7.mongodb.net/?appName=Cluster0";
+const mongoURI = "mongodb+srv://pillairishikesh_db_user:BMVPass2026@cluster0.pqg1cd7.mongodb.net/?appName=Cluster0";
 
 
 mongoose.connect(mongoURI)
