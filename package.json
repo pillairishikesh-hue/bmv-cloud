@@ -1,0 +1,14 @@
+{
+  "name": "bookmyvaluer-gateway",
+  "version": "1.0.0",
+  "description": "Cloud gateway for BookmyValuer platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.4.1"
+  }
+}
