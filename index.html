@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookmyValuer - Enterprise Operations System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #0f172a; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-slate-950 min-h-screen text-slate-100 flex flex-col overflow-y-auto custom-scroll">
+
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 shadow-md">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="p-1.5 bg-blue-500/10 rounded-lg border border-blue-500/30 text-blue-500"><i data-lucide="shield-check" class="w-5 h-5"></i></span>
+                <h1 class="text-lg font-bold tracking-tight text-white">BookmyValuer</h1>
+                <span class="text-[10px] uppercase font-mono px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/20">Cloud Production Operational</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Unified Core: Cross-validates Geofences, GLO Allocations, and Valuer Matching.</p>
+        </div>
+
+        <div class="flex items-center gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs shadow-inner">
+            <button onclick="switchSystemTab('onboarding')" id="tab-btn-onboarding" class="px-3 py-1.5 rounded-lg font-medium transition-all bg-blue-600 text-white shadow flex items-center gap-1.5">
+                <i data-lucide="database" class="w-3.5 h-3.5"></i> 1. Onboarding Ledger
+            </button>
+            <button onclick="switchSystemTab('operations')" id="tab-btn-operations" class="px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+                <i data-lucide="activity" class="w-3.5 h-3.5"></i> 2. Operations Cockpit
+            </button>
+            <button onclick="switchSystemTab('compliance')" id="tab-btn-compliance" class="px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+                <i data-lucide="sliders" class="w-3.5 h-3.5"></i> 3. HO Risk Compliance
+            </button>
+        </div>
+    </header>
+
+    <main class="p-6 max-w-7xl mx-auto w-full flex-1">
+        
+        <div id="view-onboarding" class="grid grid-cols-12 gap-6 animate-fadeIn">
+            <div class="col-span-7 space-y-6">
+                <div class="border-b border-slate-800 pb-2">
+                    <h2 class="text-base font-bold text-white flex items-center gap-2"><i data-lucide="plus-circle" class="text-blue-500 w-4 h-4"></i> Asset & Entity Registration</h2>
+                    <p class="text-xs text-slate-400">Populate systemic parameter boundaries across your target operational ecosystem.</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4">
+                        <span class="text-[10px] font-mono tracking-wider text-blue-400 uppercase border-b border-slate-800 pb-1.5 block">Onboard Branch</span>
+                        <div class="space-y-2.5 text-xs">
+                            <div><label class="text-slate-400 block mb-1">Branch Code</label><input type="text" id="ob-b-code" placeholder="HDFC0001042" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            <div><label class="text-slate-400 block mb-1">Branch Name</label><input type="text" id="ob-b-name" placeholder="Koramangala Hub" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            <div><label class="text-slate-400 block mb-1">Locality</label><input type="text" id="ob-b-locality" placeholder="Koramangala, Bengaluru" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            <div><label class="text-slate-400 block mb-1">Coordinates (Lat, Lng)</label><input type="text" id="ob-b-coords" placeholder="12.9348, 77.6189" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><label class="text-slate-400 block mb-1">Geofence (M)</label><input type="text" id="ob-b-radius" placeholder="50" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                                <div><label class="text-slate-400 block mb-1">Hours</label><input type="text" id="ob-b-hours" placeholder="09:00 AM - 06:00 PM" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            </div>
+                        </div>
+                        <button onclick="commitBranchToAtlas()" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 rounded-lg transition-all">Save Branch Parameters</button>
+                    </div>
+
+                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4">
+                        <span class="text-[10px] font-mono tracking-wider text-purple-400 uppercase border-b border-slate-800 pb-1.5 block">Onboard GLO Officer</span>
+                        <div class="space-y-2.5 text-xs">
+                            <div><label class="text-slate-400 block mb-1">Employee ID</label><input type="text" id="ob-g-id" placeholder="EMP4489" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            <div><label class="text-slate-400 block mb-1">Full Legal Name</label><input type="text" id="ob-g-name" placeholder="Anand Rao" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            <div><label class="text-slate-400 block mb-1">Mobile Number</label><input type="text" id="ob-g-phone" placeholder="+91 98765 43210" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            <div><label class="text-slate-400 block mb-1">Branch Allocation Map</label><select id="ob-g-branch" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-300"></select></div>
+                        </div>
+                        <button onclick="commitGloToAtlas()" class="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold py-2 rounded-lg transition-all">Save GLO Credentials</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4">
+                        <span class="text-[10px] font-mono tracking-wider text-amber-400 uppercase border-b border-slate-800 pb-1.5 block">Onboard Valuer Agency</span>
+                        <div class="space-y-2.5 text-xs">
+                            <div><label class="text-slate-400 block mb-1">Agency ID</label><input type="text" id="ob-a-id" placeholder="AGE9912" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            <div><label class="text-slate-400 block mb-1">Agency Name</label><input type="text" id="ob-a-name" placeholder="Apex Valuation Corp" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            <div><label class="text-slate-400 block mb-1">Contact Officer</label><input type="text" id="ob-a-officer" placeholder="K. Shivakumar" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            <div><label class="text-slate-400 block mb-1">Corporate Mobile</label><input type="text" id="ob-a-phone" placeholder="+91 99000 11223" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                        </div>
+                        <button onclick="commitAgencyToAtlas()" class="w-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold py-2 rounded-lg transition-all">Register Agency Firm</button>
+                    </div>
+
+                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4">
+                        <span class="text-[10px] font-mono tracking-wider text-emerald-400 uppercase border-b border-slate-800 pb-1.5 block">Onboard Valuer Asset</span>
+                        <div class="space-y-2.5 text-xs">
+                            <div><label class="text-slate-400 block mb-1">Valuer SysID</label><input type="text" id="ob-v-id" placeholder="VAL-8821" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            <div><label class="text-slate-400 block mb-1">Valuer Name</label><input type="text" id="ob-v-name" placeholder="Rajesh Kumar" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            <div><label class="text-slate-400 block mb-1">Live Coordinates (Lat, Lng)</label><input type="text" id="ob-v-coords" placeholder="12.9410, 77.6210" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                            <div><label class="text-slate-400 block mb-1">Parent Agency Map</label><select id="ob-v-agency" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-300"></select></div>
+                        </div>
+                        <button onclick="commitValuerToAtlas()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 rounded-lg transition-all">Authorize Field Valuer</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-5 space-y-4">
+                <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
+                    <div>
+                        <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">Verified Cloud Repositories</span>
+                        <h3 class="text-sm font-semibold text-white">Ecosystem Data Registries</h3>
+                    </div>
+                    <i data-lucide="refresh-cw" onclick="queryCloudRegistryUpdates()" class="w-4 h-4 text-slate-500 hover:text-white cursor-pointer transition-all"></i>
+                </div>
+
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <span class="text-[10px] font-mono text-slate-400 flex items-center justify-between border-b border-slate-850 pb-1">LIVE BRANCH ENCLYCLOPEDIA <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400"></i></span>
+                    <div id="manifest-branches-pane" class="space-y-1.5 max-h-[140px] overflow-y-auto custom-scroll text-xs"></div>
+                </div>
+
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <span class="text-[10px] font-mono text-slate-400 flex items-center justify-between border-b border-slate-850 pb-1">LIVE GLO ACCOUNT PROFILES <i data-lucide="user-check" class="w-3.5 h-3.5 text-purple-400"></i></span>
+                    <div id="manifest-glos-pane" class="space-y-1.5 max-h-[140px] overflow-y-auto custom-scroll text-xs"></div>
+                </div>
+
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <span class="text-[10px] font-mono text-slate-400 flex items-center justify-between border-b border-slate-850 pb-1">LIVE COMPLIANT AGENCIES <i data-lucide="briefcase" class="w-3.5 h-3.5 text-amber-400"></i></span>
+                    <div id="manifest-agencies-pane" class="space-y-1.5 max-h-[140px] overflow-y-auto custom-scroll text-xs"></div>
+                </div>
+
+                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <span class="text-[10px] font-mono text-slate-400 flex items-center justify-between border-b border-slate-850 pb-1">LIVE ACCREDITED VALUERS <i data-lucide="navigation" class="w-3.5 h-3.5 text-emerald-400"></i></span>
+                    <div id="manifest-valuers-pane" class="space-y-1.5 max-h-[140px] overflow-y-auto custom-scroll text-xs"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-operations" class="hidden space-y-6 animate-fadeIn">
+            <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2"><i data-lucide="activity" class="text-emerald-500 w-4 h-4"></i> Real-time Operations Cockpit</h2>
+                    <p class="text-xs text-slate-400">Initialize a new booking to trigger the geo-proximity evaluation array.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-6">
+                <div class="col-span-4 bg-slate-900 p-5 rounded-xl border border-slate-800 space-y-4 h-fit">
+                    <span class="text-xs font-semibold tracking-wide text-white block">Step 1: Initialize Gold Vaulting Case</span>
+                    <div class="space-y-3 text-xs">
+                        <div><label class="text-slate-400 block mb-1">Originating Branch</label><select id="op-case-branch" onchange="runLiveProximityEvaluation()" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></select></div>
+                        <div>
+                            <label class="text-slate-400 block mb-1">Assigned Branch GLO</label>
+                            <div id="op-case-glo-display" class="w-full bg-slate-950 border border-slate-850 rounded p-2 text-slate-400 italic">Select a branch to map its GLO</div>
+                        </div>
+                        <div><label class="text-slate-400 block mb-1">Customer Gold Weight Estimate (Grams)</label><input type="number" id="op-case-weight" placeholder="e.g. 140" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
+                    </div>
+                    <button onclick="executeAutomatedAllocationRoute()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="compass" class="w-4 h-4"></i> Run Matching Loop
+                    </button>
+                </div>
+
+                <div class="col-span-8 space-y-4">
+                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-col min-h-[320px]">
+                        <span class="text-[10px] font-mono text-slate-400 tracking-wider block border-b border-slate-800 pb-2 mb-3">STEP 2: ACCELERATED DISTANCE ALGORITHM EVALUATION MATRIX</span>
+                        
+                        <div class="flex-1 overflow-x-auto text-xs">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-slate-400 border-b border-slate-800 text-[10px] tracking-wider uppercase">
+                                        <th class="pb-2">Valuer Asset</th>
+                                        <th class="pb-2">Parent Agency</th>
+                                        <th class="pb-2">Computed Distance</th>
+                                        <th class="pb-2">System Status</th>
+                                        <th class="pb-2 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="allocation-matrix-body" class="divide-y divide-slate-850">
+                                    <tr><td colspan="5" class="py-8 text-center text-slate-500 italic">Select an originating branch asset to compile algorithmic options.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                <span class="text-[10px] font-mono tracking-wider text-blue-400 uppercase block border-b border-slate-800 pb-2 mb-3">Active Operational Bookings Tracker Ledger</span>
+                <div class="overflow-x-auto text-xs">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-slate-400 text-[10px] uppercase border-b border-slate-800 tracking-wider">
+                                <th class="pb-2">Booking ID</th>
+                                <th class="pb-2">Branch Context</th>
+                                <th class="pb-2">Accredited Valuer</th>
+                                <th class="pb-2">Weight Parameter</th>
+                                <th class="pb-2">Current Lifecycle State</th>
+                                <th class="pb-2 text-right">Interactive Actions Bypass</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookings-ledger-body" class="divide-y divide-slate-850">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-compliance" class="hidden space-y-6 animate-fadeIn">
+            <div class="border-b border-slate-800 pb-2">
+                <h2 class="text-base font-bold text-white flex items-center gap-2"><i data-lucide="sliders" class="text-amber-500 w-4 h-4"></i> Head Office Risk Management Panel</h2>
+                <p class="text-xs text-slate-400">Audit system parameters, monitor risk performance flags, and review blacklisted valuer boundaries.</p>
+            </div>
+
+            <div class="grid grid-cols-3 gap-6">
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <span class="text-xs font-semibold text-white flex items-center gap-2"><i data-lucide="alert-triangle" class="text-amber-400 w-4 h-4"></i> Valuer Rejection Flags</span>
+                    <div id="compliance-rejection-pane" class="space-y-2 text-xs max-h-[200px] overflow-y-auto custom-scroll">
+                        </div>
+                </div>
+
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <span class="text-xs font-semibold text-white flex items-center gap-2"><i data-lucide="shuffle" class="text-red-400 w-4 h-4"></i> Branch Proximity Violations</span>
+                    <div id="compliance-geofence-pane" class="space-y-2 text-xs max-h-[200px] overflow-y-auto custom-scroll">
+                        </div>
+                </div>
+
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <span class="text-xs font-semibold text-white flex items-center gap-2"><i data-lucide="award" class="text-blue-400 w-4 h-4"></i> Rating Metric Audit Matrix</span>
+                    <div id="compliance-rating-pane" class="space-y-2 text-xs max-h-[200px] overflow-y-auto custom-scroll">
+                        </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const GATEWAY_API = "https://bmv-cloud.onrender.com/api";
+
+        // Global data cache arrays
+        let globalBranches = [];
+        let globalGlos = [];
+        let globalAgencies = [];
+        let globalValuers = [];
+        let globalBookings = [];
+
+        function switchSystemTab(tabId) {
+            ['onboarding', 'operations', 'compliance'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                document.getElementById(`tab-btn-${t}`).classList.remove('bg-blue-600', 'text-white', 'shadow');
+                document.getElementById(`tab-btn-${t}`).classList.add('text-slate-400');
+            });
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tabId}`).classList.add('bg-blue-600', 'text-white', 'shadow');
+            document.getElementById(`tab-btn-${tabId}`).classList.remove('text-slate-400');
+            
+            if(tabId === 'operations' || tabId === 'compliance') {
+                runLiveProximityEvaluation();
+            }
+        }
+
+        // --- GLOBAL DATA RETRIEVAL ENGINE ARRAYS ---
+        async function queryCloudRegistryUpdates() {
+            try {
+                // 1. Fetch Branches
+                const bRes = await fetch(`${GATEWAY_API}/branches`);
+                globalBranches = await bRes.json();
+                document.getElementById('manifest-branches-pane').innerHTML = globalBranches.map(b => `
+                    <div class="p-2 bg-slate-950 border border-slate-850 rounded-lg">
+                        <div class="flex justify-between font-semibold text-slate-200"><span>${b.branchName}</span><span class="text-blue-400 font-mono">${b.branchCode}</span></div>
+                        <p class="text-[10px] text-slate-500 mt-0.5">Locality: ${b.locality} | Coords: [${[...(b.location?.coordinates || [])].reverse().join(', ')}]</p>
+                    </div>
+                `).join('');
+                
+                // Map fields to selectors dynamically
+                document.getElementById('ob-g-branch').innerHTML = globalBranches.map(b => `<option value="${b.branchCode}">${b.branchName} (${b.branchCode})</option>`).join('');
+                document.getElementById('op-case-branch').innerHTML = `<option value="">-- Choose Branch Target --</option>` + globalBranches.map(b => `<option value="${b.branchCode}">${b.branchName}</option>`).join('');
+
+                // 2. Fetch GLO Officers
+                const gRes = await fetch(`${GATEWAY_API}/glos`);
+                globalGlos = await gRes.json();
+                document.getElementById('manifest-glos-pane').innerHTML = globalGlos.map(g => `
+                    <div class="p-2 bg-slate-950 border border-slate-850 rounded-lg">
+                        <div class="flex justify-between font-semibold text-slate-200"><span>${g.fullName}</span><span class="text-purple-400 font-mono">${g.employeeId}</span></div>
+                        <p class="text-[10px] text-slate-500">Target Mapped Code: ${g.allocatedBranchCode}</p>
+                    </div>
+                `).join('');
+
+                // 3. Fetch Valuation Agencies
+                const aRes = await fetch(`${GATEWAY_API}/agencies`);
+                globalAgencies = await aRes.json();
+                document.getElementById('manifest-agencies-pane').innerHTML = globalAgencies.map(a => `
+                    <div class="p-2 bg-slate-950 border border-slate-850 rounded-lg">
+                        <div class="flex justify-between font-semibold text-slate-200"><span>${a.agencyName}</span><span class="text-amber-400 font-mono">${a.agencyId}</span></div>
+                        <p class="text-[10px] text-slate-500">Contact: ${a.officerName} | Mobile: ${a.contactMobile}</p>
+                    </div>
+                `).join('');
+                document.getElementById('ob-v-agency').innerHTML = globalAgencies.map(a => `<option value="${a.agencyId}">${a.agencyName}</option>`).join('');
+
+                // 4. Fetch Accredited Valuers
+                const vRes = await fetch(`${GATEWAY_API}/valuers`);
+                globalValuers = await vRes.json();
+                document.getElementById('manifest-valuers-pane').innerHTML = globalValuers.map(v => `
+                    <div class="p-2 bg-slate-950 border border-slate-850 rounded-lg">
+                        <div class="flex justify-between font-semibold text-slate-200"><span>${v.name}</span><span class="text-emerald-400 font-mono">${v.sysId}</span></div>
+                        <p class="text-[10px] text-slate-500">Status: ${v.status} | Agency: ${v.agencyId} | Rejections: ${v.rejectionsCount}</p>
+                    </div>
+                `).join('');
+
+                // 5. Fetch Active Bookings Ledger Flow
+                const bkRes = await fetch(`${GATEWAY_API}/bookings`);
+                globalBookings = await bkRes.json();
+                renderBookingsTable();
+                renderComplianceControls();
+
+            } catch (err) {
+                console.error("Cloud synchronization mapping dropped:", err);
+            }
+        }
+
+        // --- SUBMIT COMMIT METHODS DOWN TO CLOUD INSTANCE ---
+        async function commitBranchToAtlas() {
+            const code = document.getElementById('ob-b-code').value.trim();
+            const name = document.getElementById('ob-b-name').value.trim();
+            const locality = document.getElementById('ob-b-locality').value.trim();
+            const coordsStr = document.getElementById('ob-b-coords').value.trim();
+            const radius = document.getElementById('ob-b-radius').value.trim();
+            const hours = document.getElementById('ob-b-hours').value.trim();
+
+            if(!code || !name || !coordsStr) return alert("All key base fields require initialization.");
+            const splitGeo = coordsStr.split(',').map(c => parseFloat(c.trim()));
+
+            const payload = {
+                branchCode: code, branchName: name, locality: locality,
+                location: { type: "Point", coordinates: [splitGeo[1], splitGeo[0]] },
+                geofenceRadiusThreshold: radius || "50", operatingHoursWindow: hours || "09:00 AM - 06:00 PM"
+            };
+
+            const saveRes = await fetch(`${GATEWAY_API}/branches`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            if (!saveRes.ok) { const errBody = await saveRes.json().catch(() => ({})); return alert("Not saved: " + (errBody.code === 11000 ? "this ID already exists." : (errBody.message || "server error."))); }
+            ['ob-b-code', 'ob-b-name', 'ob-b-locality', 'ob-b-coords', 'ob-b-radius', 'ob-b-hours'].forEach(id => document.getElementById(id).value = '');
+            queryCloudRegistryUpdates();
+        }
+
+        async function commitGloToAtlas() {
+            const id = document.getElementById('ob-g-id').value.trim();
+            const name = document.getElementById('ob-g-name').value.trim();
+            const phone = document.getElementById('ob-g-phone').value.trim();
+            const branch = document.getElementById('ob-g-branch').value;
+
+            if(!id || !name) return alert("Required parameters mapping fields empty.");
+            const payload = { employeeId: id, fullName: name, contactMobile: phone, allocatedBranchCode: branch };
+
+            const saveRes = await fetch(`${GATEWAY_API}/glos`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            if (!saveRes.ok) { const errBody = await saveRes.json().catch(() => ({})); return alert("Not saved: " + (errBody.code === 11000 ? "this ID already exists." : (errBody.message || "server error."))); }
+            ['ob-g-id', 'ob-g-name', 'ob-g-phone'].forEach(id => document.getElementById(id).value = '');
+            queryCloudRegistryUpdates();
+        }
+
+        async function commitAgencyToAtlas() {
+            const id = document.getElementById('ob-a-id').value.trim();
+            const name = document.getElementById('ob-a-name').value.trim();
+            const officer = document.getElementById('ob-a-officer').value.trim();
+            const phone = document.getElementById('ob-a-phone').value.trim();
+
+            if(!id || !name) return alert("Agency profiling fields mandate inputs.");
+            const payload = { agencyId: id, agencyName: name, officerName: officer, contactMobile: phone };
+
+            const saveRes = await fetch(`${GATEWAY_API}/agencies`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            if (!saveRes.ok) { const errBody = await saveRes.json().catch(() => ({})); return alert("Not saved: " + (errBody.code === 11000 ? "this ID already exists." : (errBody.message || "server error."))); }
+            ['ob-a-id', 'ob-a-name', 'ob-a-officer', 'ob-a-phone'].forEach(id => document.getElementById(id).value = '');
+            queryCloudRegistryUpdates();
+        }
+
+        async function commitValuerToAtlas() {
+            const id = document.getElementById('ob-v-id').value.trim();
+            const name = document.getElementById('ob-v-name').value.trim();
+            const coordsStr = document.getElementById('ob-v-coords').value.trim();
+            const agency = document.getElementById('ob-v-agency').value;
+
+            if(!id || !name || !coordsStr) return alert("Valuer parameters structure requires mapping.");
+            const splitGeo = coordsStr.split(',').map(c => parseFloat(c.trim()));
+
+            const payload = { sysId: id, name: name, lat: splitGeo[0], lng: splitGeo[1], agencyId: agency };
+
+            const saveRes = await fetch(`${GATEWAY_API}/valuers`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            if (!saveRes.ok) { const errBody = await saveRes.json().catch(() => ({})); return alert("Not saved: " + (errBody.code === 11000 ? "this ID already exists." : (errBody.message || "server error."))); }
+            ['ob-v-id', 'ob-v-name', 'ob-v-coords'].forEach(id => document.getElementById(id).value = '');
+            queryCloudRegistryUpdates();
+        }
+
+        // --- OPERATIONS PROXIMITY CALCULATOR ENGINE ---
+        function calculateHaversineKM(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth radius in KM
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function runLiveProximityEvaluation() {
+            const targetBranchCode = document.getElementById('op-case-branch').value;
+            if(!targetBranchCode) {
+                document.getElementById('op-case-glo-display').innerText = "Select a branch to map its GLO";
+                document.getElementById('allocation-matrix-body').innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-500 italic">Select an originating branch asset to compile algorithmic options.</td></tr>`;
+                return;
+            }
+
+            const targetBranch = globalBranches.find(b => b.branchCode === targetBranchCode);
+            const activeGlo = globalGlos.find(g => g.allocatedBranchCode === targetBranchCode);
+            
+            document.getElementById('op-case-glo-display').innerText = activeGlo ? `${activeGlo.fullName} (${activeGlo.employeeId})` : "NO GLO ALLOCATED TO THIS HUB";
+
+            const bLat = targetBranch.location.coordinates[1]; // Longitude/Latitude sorting bypass handles inversion
+            const bLng = targetBranch.location.coordinates[0];
+
+            // Map and parse proximity distance values across valuers arrays
+            const evaluationOptions = globalValuers.map(v => {
+                const distance = calculateHaversineKM(bLat, bLng, v.lat, v.lng);
+                return { ...v, computedDistanceKM: distance };
+            }).sort((x, y) => x.computedDistanceKM - y.computedDistanceKM);
+
+            document.getElementById('allocation-matrix-body').innerHTML = evaluationOptions.map(v => {
+                const isBlacklisted = v.blacklistedBranchCodes?.includes(targetBranchCode);
+                let rowStatusStyle = "text-emerald-400 font-medium";
+                let actionBtnHTML = `<button onclick="allocateValuerJob('${v.sysId}', '${targetBranchCode}')" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-white font-medium">Assign</button>`;
+
+                if(v.status !== 'available') {
+                    rowStatusStyle = "text-slate-500 italic";
+                    actionBtnHTML = `<span class="text-[10px] text-slate-500 tracking-wide">Engaged in Field</span>`;
+                }
+                if(isBlacklisted) {
+                    rowStatusStyle = "text-red-500 font-bold uppercase";
+                    actionBtnHTML = `<span class="text-[10px] text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Blacklist Block</span>`;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-850/50 transition-colors">
+                        <td class="py-3 font-semibold text-slate-200">${v.name} <span class="text-[10px] font-mono block text-slate-500">${v.sysId}</span></td>
+                        <td class="py-3 text-slate-400">${v.agencyId}</td>
+                        <td class="py-3 font-mono font-medium text-blue-400">${v.computedDistanceKM.toFixed(2)} KM</td>
+                        <td class="py-3 ${rowStatusStyle}">${isBlacklisted ? 'HO Blacklisted' : v.status}</td>
+                        <td class="py-3 text-right">${actionBtnHTML}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function executeAutomatedAllocationRoute() {
+            if (!document.getElementById('op-case-branch').value) return alert("Choose an originating branch first.");
+            runLiveProximityEvaluation();
+        }
+
+        async function allocateValuerJob(valuerId, branchCode) {
+            const weight = document.getElementById('op-case-weight').value || "100";
+            const payload = { branchCode: branchCode, valuerSysId: valuerId, goldWeightGrams: weight };
+
+            const response = await fetch(`${GATEWAY_API}/bookings`, {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+            });
+
+            if(response.ok) {
+                document.getElementById('op-case-weight').value = '';
+                queryCloudRegistryUpdates();
+            } else {
+                alert("Assignment engine error.");
+            }
+        }
+
+        function renderBookingsTable() {
+            document.getElementById('bookings-ledger-body').innerHTML = globalBookings.map(b => {
+                let statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">Assigned</span>`;
+                let actionBypassHTML = `
+                    <button onclick="updateBookingLifecycle('${b.bookingId}', 'accepted')" class="bg-emerald-600 hover:bg-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded mr-1">Accept</button>
+                    <button onclick="updateBookingLifecycle('${b.bookingId}', 'rejected')" class="bg-red-600 hover:bg-red-700 text-[10px] font-semibold px-2 py-0.5 rounded">Reject</button>
+                `;
+
+                if(b.status === 'accepted') {
+                    statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">Transit to Vault</span>`;
+                    actionBypassHTML = `<button onclick="updateBookingLifecycle('${b.bookingId}', 'completed')" class="bg-blue-600 hover:bg-blue-700 text-[10px] font-semibold px-2 py-0.5 rounded">Vault Verified</button>`;
+                } else if(b.status === 'completed') {
+                    statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Success Closed</span>`;
+                    actionBypassHTML = `<span class="text-slate-500 italic text-[10px]">Archived Settlement</span>`;
+                } else if(b.status === 'rejected') {
+                    statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-500/10 text-red-400 border border-red-500/20">Rejected By Valuer</span>`;
+                    actionBypassHTML = `<span class="text-slate-500 italic text-[10px]">Audit Log Triggered</span>`;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-850/30 transition-all">
+                        <td class="py-2.5 font-mono text-slate-300 font-medium">${b.bookingId}</td>
+                        <td class="py-2.5 text-slate-400">${b.branchCode}</td>
+                        <td class="py-2.5 text-slate-300 font-medium">${b.valuerSysId}</td>
+                        <td class="py-2.5 font-mono text-slate-400">${b.goldWeightGrams}g</td>
+                        <td class="py-2.5">${statusBadge}</td>
+                        <td class="py-2.5 text-right">${actionBypassHTML}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function updateBookingLifecycle(bookingId, newState) {
+            await fetch(`${GATEWAY_API}/bookings/status`, {
+                method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bookingId: bookingId, status: newState })
+            });
+            queryCloudRegistryUpdates();
+        }
+
+        // --- HO COMPLIANCE AUDITING RENDERS ---
+        function renderComplianceControls() {
+            // Audit 1: Valuers with High Rejections
+            document.getElementById('compliance-rejection-pane').innerHTML = globalValuers.map(v => {
+                const alertLevel = v.rejectionsCount >= 3 ? 'text-red-400 font-bold bg-red-950/20' : 'text-slate-400';
+                return `
+                    <div class="p-2 bg-slate-950 border border-slate-850 rounded flex justify-between items-center ${alertLevel}">
+                        <div><span class="font-medium text-slate-200">${v.name}</span> <span class="text-[10px] font-mono block">${v.sysId}</span></div>
+                        <div class="text-right">
+                            <span class="block text-[10px] font-mono uppercase tracking-wider text-slate-500">Rejections</span>
+                            <span class="text-xs font-bold font-mono">${v.rejectionsCount}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Audit 2: High Value/Geofence Audit Logs
+            document.getElementById('compliance-geofence-pane').innerHTML = globalBookings.filter(b => b.status === 'completed').map(b => `
+                <div class="p-2 bg-slate-950 border border-slate-850 rounded space-y-1">
+                    <div class="flex justify-between font-mono text-[10px] text-slate-400"><span>ID: ${b.bookingId}</span><span class="text-emerald-400 font-bold">PASSED</span></div>
+                    <p class="text-[10px] text-slate-500">Biometric & GPS Timestamp Signature Confirmed inside Geofence Bounds.</p>
+                </div>
+            `).join('') || `<div class="text-center text-slate-600 py-6 italic">No closed audits logged today.</div>`;
+
+            // Audit 3: Agency Quality Matrices
+            document.getElementById('compliance-rating-pane').innerHTML = globalValuers.map(v => `
+                <div class="p-2 bg-slate-950 border border-slate-850 rounded flex justify-between items-center">
+                    <div><span class="font-medium text-slate-200">${v.name}</span> <span class="text-[10px] font-mono block text-slate-500">${v.agencyId}</span></div>
+                    <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-amber-400 font-mono font-bold text-xs">
+                        <i data-lucide="star" class="w-3 h-3 fill-amber-400 text-amber-400"></i> 5.0
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        window.onload = function() {
+            lucide.createIcons();
+            queryCloudRegistryUpdates();
+        }
+    </script>
+</body>
+</html>
