@@ -6,8 +6,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ⚠️ Ensure your correct alphanumerical password parameter remains active here
-const mongoURI = "mongodb+srv://pillairishikesh_db_user:MBVPass2026@cluster0.pqg1cd7.mongodb.net/BookmyValuer?retryWrites=true&w=majority";
+// DB connection string is read from the MONGODB_URI environment variable set in Render. Never put the password in code.
+const mongoURI = process.env.MONGODB_URI;
 
 mongoose.connect(mongoURI)
   .then(() => console.log("Production Storage Loop Connection Confirmed."))
