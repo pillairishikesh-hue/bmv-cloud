@@ -6,6 +6,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Serve the BookMyValuer web app at the main URL
+app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
+
 // DB connection string is read from the MONGODB_URI environment variable set in Render. Never put the password in code.
 const mongoURI = process.env.MONGODB_URI;
 
