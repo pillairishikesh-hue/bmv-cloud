@@ -1,4 +1,4 @@
-// BookMyValuer API + web app server (v2)
+// BookMyValuer API + web app server (v3: face check-in + live tracking)
 // Roles: ho (head office), glo (gold loan officer), valuer, agency
 const express = require('express');
 const mongoose = require('mongoose');
@@ -8,7 +8,7 @@ const path = require('path');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '3mb' }));
 
 // Serve the BookMyValuer web app at the main URL
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -67,6 +67,9 @@ const valuerSchema = new mongoose.Schema({
   status: { type: String, default: 'available' }, // available | engaged | offline
   rejectionsCount: { type: Number, default: 0 },
   blacklistedBranchCodes: { type: [String], default: [] },
+  facePhoto: String,              // reference face photo (small JPEG data URL)
+  faceDescriptor: [Number],       // 128-number face signature computed in the browser
+  lastLat: Number, lastLng: Number, lastLocAt: Date, // latest GPS position (real GPS mode)
   passwordHash: String
 }, { collection: 'Valuer' });
 const Valuer = mongoose.model('Valuer', valuerSchema);
@@ -87,8 +90,18 @@ const bookingSchema = new mongoose.Schema({
   lan: String,
   goldWeightGrams: String,
   distanceKm: Number,
-  status: { type: String, default: 'requested' }, // requested | accepted | rejected | completed
+  status: { type: String, default: 'requested' }, // requested | accepted (en route) | arrived | in_progress | completed | rejected
   etaMins: Number,
+  startLat: Number, startLng: Number,
+  trackingMode: { type: String, default: 'simulated' }, // simulated | gps
+  simSeconds: { type: Number, default: 60 },
+  acceptedAt: Date,
+  arrivedAt: Date,
+  startedAt: Date,
+  checkinPhoto: String,
+  faceDistance: Number,
+  faceAttempts: { type: Number, default: 0 },
+  checkinDistanceM: Number,
   valuationAmount: Number,
   rating: Number,
   ratingComment: String,
@@ -157,7 +170,25 @@ function km(lat1, lon1, lat2, lon2) {
 async function notify(audience, type, title, message, bookingId) {
   await EventLog.create({ audience: [...new Set(audience.filter(Boolean))], type, title, message, bookingId });
 }
-const strip = doc => { const o = doc.toObject ? doc.toObject() : { ...doc }; delete o.passwordHash; return o; };
+const strip = doc => { const o = doc.toObject ? doc.toObject() : { ...doc }; delete o.passwordHash; o.hasFace = !!(o.faceDescriptor && o.faceDescriptor.length); delete o.facePhoto; delete o.faceDescriptor; return o; };
+const FACE_MATCH_THRESHOLD = 0.5; // lower = stricter; same person is typically 0.2-0.45
+function faceDistance(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== 128 || b.length !== 128) return null;
+  return Math.sqrt(a.reduce((s, x, i) => s + (x - b[i]) ** 2, 0));
+}
+// Where is the valuer for this booking right now? Simulated drive (demo) or last real GPS fix.
+function currentPosition(b, v, branch) {
+  const [bLng, bLat] = branch.location.coordinates;
+  if (['arrived', 'in_progress', 'completed'].includes(b.status)) return { lat: bLat, lng: bLng, progress: 1 };
+  if (b.status !== 'accepted') return { lat: v.lat, lng: v.lng, progress: 0 };
+  if (b.trackingMode === 'gps' && v.lastLat != null) {
+    const total = km(b.startLat, b.startLng, bLat, bLng) || 0.001;
+    return { lat: v.lastLat, lng: v.lastLng, progress: Math.max(0, Math.min(1, 1 - km(v.lastLat, v.lastLng, bLat, bLng) / total)) };
+  }
+  const p = Math.min(1, (Date.now() - new Date(b.acceptedAt || b.respondedAt).getTime()) / 1000 / (b.simSeconds || 60));
+  const e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2; // ease in-out
+  return { lat: b.startLat + (bLat - b.startLat) * e, lng: b.startLng + (bLng - b.startLng) * e, progress: p };
+}
 const inr = n => '₹' + Number(n).toLocaleString('en-IN');
 
 // ---------- Auth ----------
@@ -228,7 +259,7 @@ app.get('/api/matches', auth('glo'), wrap(async (req, res) => {
 app.get('/api/bookings', auth(), wrap(async (req, res) => {
   const u = req.user;
   const filter = u.role === 'glo' ? { branchCode: u.branchCode } : u.role === 'valuer' ? { valuerSysId: u.id } : u.role === 'agency' ? { agencyId: u.id } : {};
-  res.json(await Booking.find(filter).sort({ requestedAt: -1 }).limit(200));
+  res.json(await Booking.find(filter).select('-checkinPhoto').sort({ requestedAt: -1 }).limit(200));
 }));
 
 app.post('/api/bookings', auth('glo'), wrap(async (req, res) => {
@@ -262,9 +293,12 @@ async function loadForValuer(req) {
 app.post('/api/bookings/:id/accept', auth('valuer'), wrap(async (req, res) => {
   const b = await loadForValuer(req);
   if (b.status !== 'requested') return res.status(400).json({ message: 'This request is no longer open.' });
-  b.status = 'accepted'; b.respondedAt = new Date(); b.etaMins = Number(req.body.etaMins) || null; await b.save();
+  const v = await Valuer.findOne({ sysId: b.valuerSysId });
+  b.status = 'accepted'; b.respondedAt = b.acceptedAt = new Date(); b.etaMins = Number(req.body.etaMins) || null;
+  b.startLat = v.lat; b.startLng = v.lng; b.trackingMode = req.body.trackingMode === 'gps' ? 'gps' : 'simulated';
+  await b.save();
   await notify([`glo:${b.gloId}`, b.agencyId && `agency:${b.agencyId}`, 'ho'], 'accepted', 'Valuer accepted',
-    `${req.user.name} accepted ${b.bookingId} (LAN ${b.lan})${b.etaMins ? `, arriving in about ${b.etaMins} min` : ''}. Valuation in progress.`, b.bookingId);
+    `${req.user.name} accepted ${b.bookingId} (LAN ${b.lan})${b.etaMins ? `, arriving in about ${b.etaMins} min` : ''}. Track them live on the map.`, b.bookingId);
   res.json(b);
 }));
 
@@ -281,7 +315,7 @@ app.post('/api/bookings/:id/reject', auth('valuer'), wrap(async (req, res) => {
 
 app.post('/api/bookings/:id/complete', auth('valuer'), wrap(async (req, res) => {
   const b = await loadForValuer(req);
-  if (b.status !== 'accepted') return res.status(400).json({ message: 'Only a valuation in progress can be completed.' });
+  if (b.status !== 'in_progress') return res.status(400).json({ message: 'Only a valuation in progress can be completed.' });
   const amount = Number(String(req.body.valuationAmount || '').replace(/[^0-9.]/g, ''));
   if (!amount || amount <= 0) return res.status(400).json({ message: 'Enter the valuation amount.' });
   b.status = 'completed'; b.valuationAmount = amount; b.completedAt = new Date(); await b.save();
@@ -300,6 +334,91 @@ app.post('/api/bookings/:id/rate', auth('glo'), wrap(async (req, res) => {
   b.rating = rating; b.ratingComment = req.body.comment || ''; b.ratedAt = new Date(); await b.save();
   await notify([`valuer:${b.valuerSysId}`, b.agencyId && `agency:${b.agencyId}`, 'ho'], 'rated', 'New rating',
     `${req.user.name} rated ${b.bookingId} (LAN ${b.lan}) ${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}${b.ratingComment ? ': "' + b.ratingComment + '"' : ''}`, b.bookingId);
+  res.json(b);
+}));
+
+// ---------- Live tracking ----------
+async function loadBookingForViewer(req) {
+  const b = await Booking.findOne({ bookingId: req.params.id });
+  if (!b) throw new Error('Booking not found.');
+  const u = req.user;
+  const allowed = u.role === 'ho' || (u.role === 'glo' && b.branchCode === u.branchCode) || (u.role === 'valuer' && b.valuerSysId === u.id) || (u.role === 'agency' && b.agencyId === u.id);
+  if (!allowed) throw new Error('You cannot view this booking.');
+  return b;
+}
+app.get('/api/bookings/:id/track', auth(), wrap(async (req, res) => {
+  const b = await loadBookingForViewer(req);
+  const [v, branch] = await Promise.all([Valuer.findOne({ sysId: b.valuerSysId }), Branch.findOne({ branchCode: b.branchCode })]);
+  const pos = currentPosition(b, v, branch);
+  const [bLng, bLat] = branch.location.coordinates;
+  const distM = Math.round(km(pos.lat, pos.lng, bLat, bLng) * 1000);
+  const remainingMins = b.status === 'accepted' && b.etaMins ? Math.max(0, Math.round(b.etaMins * (1 - pos.progress))) : null;
+  res.json({ status: b.status, valuer: { name: v.name, sysId: v.sysId, ...pos }, start: { lat: b.startLat, lng: b.startLng },
+    branch: { name: branch.branchName, lat: bLat, lng: bLng, radiusM: Number(branch.geofenceRadiusThreshold) || 50 },
+    distanceM: distM, insideGeofence: distM <= Math.max(Number(branch.geofenceRadiusThreshold) || 50, 100), remainingMins, trackingMode: b.trackingMode });
+}));
+app.post('/api/valuers/me/location', auth('valuer'), wrap(async (req, res) => {
+  const lat = Number(req.body.lat), lng = Number(req.body.lng);
+  if (!isFinite(lat) || !isFinite(lng)) return res.status(400).json({ message: 'Bad location.' });
+  await Valuer.updateOne({ sysId: req.user.id }, { lastLat: lat, lastLng: lng, lastLocAt: new Date() });
+  res.json({ ok: true });
+}));
+
+// ---------- Face verification ----------
+app.post('/api/valuers/me/face', auth('valuer'), wrap(async (req, res) => {
+  const { photo, descriptor } = req.body;
+  if (!photo || !Array.isArray(descriptor) || descriptor.length !== 128) return res.status(400).json({ message: 'No face found in the photo. Try again with your face centred and well lit.' });
+  await Valuer.updateOne({ sysId: req.user.id }, { facePhoto: photo, faceDescriptor: descriptor.map(Number) });
+  res.json({ ok: true });
+}));
+app.post('/api/valuers/:id/face', auth('ho', 'glo'), wrap(async (req, res) => {
+  const { photo, descriptor } = req.body;
+  if (!photo || !Array.isArray(descriptor) || descriptor.length !== 128) return res.status(400).json({ message: 'No face found in the photo.' });
+  const r = await Valuer.updateOne({ sysId: req.params.id }, { facePhoto: photo, faceDescriptor: descriptor.map(Number) });
+  if (!r.matchedCount) return res.status(404).json({ message: 'Valuer not found.' });
+  res.json({ ok: true });
+}));
+
+// Valuer checks in at the branch: must be inside the geofence and the live selfie must match the registered face
+app.post('/api/bookings/:id/checkin', auth('valuer'), wrap(async (req, res) => {
+  const b = await loadForValuer(req);
+  if (b.status !== 'accepted') return res.status(400).json({ message: 'Check-in is only possible while you are on the way to the branch.' });
+  const [v, branch] = await Promise.all([Valuer.findOne({ sysId: b.valuerSysId }), Branch.findOne({ branchCode: b.branchCode })]);
+  if (!v.faceDescriptor || v.faceDescriptor.length !== 128) return res.status(400).json({ message: 'Register your face first (button at the top of your screen).' });
+  const pos = currentPosition(b, v, branch);
+  const [bLng, bLat] = branch.location.coordinates;
+  const distM = Math.round(km(pos.lat, pos.lng, bLat, bLng) * 1000);
+  const fence = Math.max(Number(branch.geofenceRadiusThreshold) || 50, 100);
+  if (distM > fence) return res.status(400).json({ message: `You are ${distM >= 1000 ? (distM / 1000).toFixed(1) + ' km' : distM + ' m'} from ${branch.branchName}. Check in when you reach the branch.` });
+  const d = faceDistance(v.faceDescriptor, req.body.descriptor);
+  if (d == null) return res.status(400).json({ message: 'No face found in the photo. Try again with your face centred and well lit.' });
+  b.faceAttempts = (b.faceAttempts || 0) + 1; b.faceDistance = Math.round(d * 1000) / 1000;
+  const score = Math.max(0, Math.round((1 - d) * 100));
+  if (d > FACE_MATCH_THRESHOLD) {
+    await b.save();
+    await notify([`glo:${b.gloId}`, b.agencyId && `agency:${b.agencyId}`, 'ho'], 'face_failed', 'Face verification failed',
+      `Check-in for ${b.bookingId} (LAN ${b.lan}): the face did not match ${v.name}'s registered photo (match ${score}%). Attempt ${b.faceAttempts}.`, b.bookingId);
+    return res.status(400).json({ message: `Face did not match your registered photo (match ${score}%). Please try again.` });
+  }
+  b.status = 'arrived'; b.arrivedAt = new Date(); b.checkinPhoto = req.body.photo; b.checkinDistanceM = distM; await b.save();
+  await notify([`glo:${b.gloId}`, b.agencyId && `agency:${b.agencyId}`, 'ho'], 'arrived', 'Valuer arrived and verified',
+    `${v.name} checked in at ${branch.branchName} for ${b.bookingId} (LAN ${b.lan}). Face match ${score}%. Please confirm the check-in to start the valuation.`, b.bookingId);
+  res.json({ ok: true, score });
+}));
+app.get('/api/bookings/:id/checkin-review', auth('glo', 'ho'), wrap(async (req, res) => {
+  const b = await loadBookingForViewer(req);
+  const v = await Valuer.findOne({ sysId: b.valuerSysId });
+  res.json({ bookingId: b.bookingId, valuerName: v.name, referencePhoto: v.facePhoto || null, checkinPhoto: b.checkinPhoto || null,
+    score: b.faceDistance != null ? Math.max(0, Math.round((1 - b.faceDistance) * 100)) : null, attempts: b.faceAttempts, distanceM: b.checkinDistanceM, arrivedAt: b.arrivedAt, status: b.status });
+}));
+// GLO confirms the valuer's check-in and starts the valuation
+app.post('/api/bookings/:id/confirm', auth('glo'), wrap(async (req, res) => {
+  const b = await Booking.findOne({ bookingId: req.params.id, branchCode: req.user.branchCode });
+  if (!b) return res.status(404).json({ message: 'Booking not found.' });
+  if (b.status !== 'arrived') return res.status(400).json({ message: 'The valuer has not checked in yet.' });
+  b.status = 'in_progress'; b.startedAt = new Date(); await b.save();
+  await notify([`valuer:${b.valuerSysId}`, b.agencyId && `agency:${b.agencyId}`, 'ho'], 'started', 'Check-in confirmed',
+    `${req.user.name} confirmed the check-in for ${b.bookingId} (LAN ${b.lan}). Valuation in progress.`, b.bookingId);
   res.json(b);
 }));
 
