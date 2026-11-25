@@ -1,550 +1,416 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BookmyValuer - Enterprise Operations System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #0f172a; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BookMyValuer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+  body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  .inp { width: 100%; background: #020617; border: 1px solid #1e293b; border-radius: 8px; padding: 8px 10px; color: #e2e8f0; font-size: 13px; }
+  .inp:focus { outline: none; border-color: #3b82f6; }
+  .lbl { display: block; color: #94a3b8; font-size: 11px; margin-bottom: 4px; }
+  .card { background: #0f172a; border: 1px solid #1e293b; border-radius: 14px; }
+  .btn { border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 600; transition: all .15s; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .tab-on { background: #2563eb; color: #fff; }
+  .pill { padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; border: 1px solid; white-space: nowrap; }
+  @keyframes slideIn { from { transform: translateX(30px); opacity: 0 } to { transform: none; opacity: 1 } }
+  .toast { animation: slideIn .25s ease-out; }
+  table td, table th { padding: 8px 6px; }
+</style>
 </head>
-<body class="bg-slate-950 min-h-screen text-slate-100 flex flex-col overflow-y-auto custom-scroll">
-
-    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 shadow-md">
-        <div>
-            <div class="flex items-center gap-2">
-                <span class="p-1.5 bg-blue-500/10 rounded-lg border border-blue-500/30 text-blue-500"><i data-lucide="shield-check" class="w-5 h-5"></i></span>
-                <h1 class="text-lg font-bold tracking-tight text-white">BookmyValuer</h1>
-                <span class="text-[10px] uppercase font-mono px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/20">Cloud Production Operational</span>
-            </div>
-            <p class="text-xs text-slate-400 mt-0.5">Unified Core: Cross-validates Geofences, GLO Allocations, and Valuer Matching.</p>
-        </div>
-
-        <div class="flex items-center gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs shadow-inner">
-            <button onclick="switchSystemTab('onboarding')" id="tab-btn-onboarding" class="px-3 py-1.5 rounded-lg font-medium transition-all bg-blue-600 text-white shadow flex items-center gap-1.5">
-                <i data-lucide="database" class="w-3.5 h-3.5"></i> 1. Onboarding Ledger
-            </button>
-            <button onclick="switchSystemTab('operations')" id="tab-btn-operations" class="px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
-                <i data-lucide="activity" class="w-3.5 h-3.5"></i> 2. Operations Cockpit
-            </button>
-            <button onclick="switchSystemTab('compliance')" id="tab-btn-compliance" class="px-3 py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
-                <i data-lucide="sliders" class="w-3.5 h-3.5"></i> 3. HO Risk Compliance
-            </button>
-        </div>
-    </header>
-
-    <main class="p-6 max-w-7xl mx-auto w-full flex-1">
-        
-        <div id="view-onboarding" class="grid grid-cols-12 gap-6 animate-fadeIn">
-            <div class="col-span-7 space-y-6">
-                <div class="border-b border-slate-800 pb-2">
-                    <h2 class="text-base font-bold text-white flex items-center gap-2"><i data-lucide="plus-circle" class="text-blue-500 w-4 h-4"></i> Asset & Entity Registration</h2>
-                    <p class="text-xs text-slate-400">Populate systemic parameter boundaries across your target operational ecosystem.</p>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4">
-                        <span class="text-[10px] font-mono tracking-wider text-blue-400 uppercase border-b border-slate-800 pb-1.5 block">Onboard Branch</span>
-                        <div class="space-y-2.5 text-xs">
-                            <div><label class="text-slate-400 block mb-1">Branch Code</label><input type="text" id="ob-b-code" placeholder="HDFC0001042" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            <div><label class="text-slate-400 block mb-1">Branch Name</label><input type="text" id="ob-b-name" placeholder="Koramangala Hub" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            <div><label class="text-slate-400 block mb-1">Locality</label><input type="text" id="ob-b-locality" placeholder="Koramangala, Bengaluru" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            <div><label class="text-slate-400 block mb-1">Coordinates (Lat, Lng)</label><input type="text" id="ob-b-coords" placeholder="12.9348, 77.6189" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <div><label class="text-slate-400 block mb-1">Geofence (M)</label><input type="text" id="ob-b-radius" placeholder="50" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                                <div><label class="text-slate-400 block mb-1">Hours</label><input type="text" id="ob-b-hours" placeholder="09:00 AM - 06:00 PM" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            </div>
-                        </div>
-                        <button onclick="commitBranchToAtlas()" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 rounded-lg transition-all">Save Branch Parameters</button>
-                    </div>
-
-                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4">
-                        <span class="text-[10px] font-mono tracking-wider text-purple-400 uppercase border-b border-slate-800 pb-1.5 block">Onboard GLO Officer</span>
-                        <div class="space-y-2.5 text-xs">
-                            <div><label class="text-slate-400 block mb-1">Employee ID</label><input type="text" id="ob-g-id" placeholder="EMP4489" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            <div><label class="text-slate-400 block mb-1">Full Legal Name</label><input type="text" id="ob-g-name" placeholder="Anand Rao" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            <div><label class="text-slate-400 block mb-1">Mobile Number</label><input type="text" id="ob-g-phone" placeholder="+91 98765 43210" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            <div><label class="text-slate-400 block mb-1">Branch Allocation Map</label><select id="ob-g-branch" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-300"></select></div>
-                        </div>
-                        <button onclick="commitGloToAtlas()" class="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold py-2 rounded-lg transition-all">Save GLO Credentials</button>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4">
-                        <span class="text-[10px] font-mono tracking-wider text-amber-400 uppercase border-b border-slate-800 pb-1.5 block">Onboard Valuer Agency</span>
-                        <div class="space-y-2.5 text-xs">
-                            <div><label class="text-slate-400 block mb-1">Agency ID</label><input type="text" id="ob-a-id" placeholder="AGE9912" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            <div><label class="text-slate-400 block mb-1">Agency Name</label><input type="text" id="ob-a-name" placeholder="Apex Valuation Corp" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            <div><label class="text-slate-400 block mb-1">Contact Officer</label><input type="text" id="ob-a-officer" placeholder="K. Shivakumar" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            <div><label class="text-slate-400 block mb-1">Corporate Mobile</label><input type="text" id="ob-a-phone" placeholder="+91 99000 11223" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                        </div>
-                        <button onclick="commitAgencyToAtlas()" class="w-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold py-2 rounded-lg transition-all">Register Agency Firm</button>
-                    </div>
-
-                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4">
-                        <span class="text-[10px] font-mono tracking-wider text-emerald-400 uppercase border-b border-slate-800 pb-1.5 block">Onboard Valuer Asset</span>
-                        <div class="space-y-2.5 text-xs">
-                            <div><label class="text-slate-400 block mb-1">Valuer SysID</label><input type="text" id="ob-v-id" placeholder="VAL-8821" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            <div><label class="text-slate-400 block mb-1">Valuer Name</label><input type="text" id="ob-v-name" placeholder="Rajesh Kumar" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            <div><label class="text-slate-400 block mb-1">Live Coordinates (Lat, Lng)</label><input type="text" id="ob-v-coords" placeholder="12.9410, 77.6210" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                            <div><label class="text-slate-400 block mb-1">Parent Agency Map</label><select id="ob-v-agency" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-300"></select></div>
-                        </div>
-                        <button onclick="commitValuerToAtlas()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 rounded-lg transition-all">Authorize Field Valuer</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-span-5 space-y-4">
-                <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
-                    <div>
-                        <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">Verified Cloud Repositories</span>
-                        <h3 class="text-sm font-semibold text-white">Ecosystem Data Registries</h3>
-                    </div>
-                    <i data-lucide="refresh-cw" onclick="queryCloudRegistryUpdates()" class="w-4 h-4 text-slate-500 hover:text-white cursor-pointer transition-all"></i>
-                </div>
-
-                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
-                    <span class="text-[10px] font-mono text-slate-400 flex items-center justify-between border-b border-slate-850 pb-1">LIVE BRANCH ENCLYCLOPEDIA <i data-lucide="map-pin" class="w-3.5 h-3.5 text-blue-400"></i></span>
-                    <div id="manifest-branches-pane" class="space-y-1.5 max-h-[140px] overflow-y-auto custom-scroll text-xs"></div>
-                </div>
-
-                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
-                    <span class="text-[10px] font-mono text-slate-400 flex items-center justify-between border-b border-slate-850 pb-1">LIVE GLO ACCOUNT PROFILES <i data-lucide="user-check" class="w-3.5 h-3.5 text-purple-400"></i></span>
-                    <div id="manifest-glos-pane" class="space-y-1.5 max-h-[140px] overflow-y-auto custom-scroll text-xs"></div>
-                </div>
-
-                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
-                    <span class="text-[10px] font-mono text-slate-400 flex items-center justify-between border-b border-slate-850 pb-1">LIVE COMPLIANT AGENCIES <i data-lucide="briefcase" class="w-3.5 h-3.5 text-amber-400"></i></span>
-                    <div id="manifest-agencies-pane" class="space-y-1.5 max-h-[140px] overflow-y-auto custom-scroll text-xs"></div>
-                </div>
-
-                <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
-                    <span class="text-[10px] font-mono text-slate-400 flex items-center justify-between border-b border-slate-850 pb-1">LIVE ACCREDITED VALUERS <i data-lucide="navigation" class="w-3.5 h-3.5 text-emerald-400"></i></span>
-                    <div id="manifest-valuers-pane" class="space-y-1.5 max-h-[140px] overflow-y-auto custom-scroll text-xs"></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="view-operations" class="hidden space-y-6 animate-fadeIn">
-            <div class="border-b border-slate-800 pb-2 flex justify-between items-center">
-                <div>
-                    <h2 class="text-base font-bold text-white flex items-center gap-2"><i data-lucide="activity" class="text-emerald-500 w-4 h-4"></i> Real-time Operations Cockpit</h2>
-                    <p class="text-xs text-slate-400">Initialize a new booking to trigger the geo-proximity evaluation array.</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-12 gap-6">
-                <div class="col-span-4 bg-slate-900 p-5 rounded-xl border border-slate-800 space-y-4 h-fit">
-                    <span class="text-xs font-semibold tracking-wide text-white block">Step 1: Initialize Gold Vaulting Case</span>
-                    <div class="space-y-3 text-xs">
-                        <div><label class="text-slate-400 block mb-1">Originating Branch</label><select id="op-case-branch" onchange="runLiveProximityEvaluation()" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></select></div>
-                        <div>
-                            <label class="text-slate-400 block mb-1">Assigned Branch GLO</label>
-                            <div id="op-case-glo-display" class="w-full bg-slate-950 border border-slate-850 rounded p-2 text-slate-400 italic">Select a branch to map its GLO</div>
-                        </div>
-                        <div><label class="text-slate-400 block mb-1">Customer Gold Weight Estimate (Grams)</label><input type="number" id="op-case-weight" placeholder="e.g. 140" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200"></div>
-                    </div>
-                    <button onclick="executeAutomatedAllocationRoute()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg transition-all flex items-center justify-center gap-2">
-                        <i data-lucide="compass" class="w-4 h-4"></i> Run Matching Loop
-                    </button>
-                </div>
-
-                <div class="col-span-8 space-y-4">
-                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-col min-h-[320px]">
-                        <span class="text-[10px] font-mono text-slate-400 tracking-wider block border-b border-slate-800 pb-2 mb-3">STEP 2: ACCELERATED DISTANCE ALGORITHM EVALUATION MATRIX</span>
-                        
-                        <div class="flex-1 overflow-x-auto text-xs">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="text-slate-400 border-b border-slate-800 text-[10px] tracking-wider uppercase">
-                                        <th class="pb-2">Valuer Asset</th>
-                                        <th class="pb-2">Parent Agency</th>
-                                        <th class="pb-2">Computed Distance</th>
-                                        <th class="pb-2">System Status</th>
-                                        <th class="pb-2 text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="allocation-matrix-body" class="divide-y divide-slate-850">
-                                    <tr><td colspan="5" class="py-8 text-center text-slate-500 italic">Select an originating branch asset to compile algorithmic options.</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                <span class="text-[10px] font-mono tracking-wider text-blue-400 uppercase block border-b border-slate-800 pb-2 mb-3">Active Operational Bookings Tracker Ledger</span>
-                <div class="overflow-x-auto text-xs">
-                    <table class="w-full text-left">
-                        <thead>
-                            <tr class="text-slate-400 text-[10px] uppercase border-b border-slate-800 tracking-wider">
-                                <th class="pb-2">Booking ID</th>
-                                <th class="pb-2">Branch Context</th>
-                                <th class="pb-2">Accredited Valuer</th>
-                                <th class="pb-2">Weight Parameter</th>
-                                <th class="pb-2">Current Lifecycle State</th>
-                                <th class="pb-2 text-right">Interactive Actions Bypass</th>
-                            </tr>
-                        </thead>
-                        <tbody id="bookings-ledger-body" class="divide-y divide-slate-850">
-                            </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="view-compliance" class="hidden space-y-6 animate-fadeIn">
-            <div class="border-b border-slate-800 pb-2">
-                <h2 class="text-base font-bold text-white flex items-center gap-2"><i data-lucide="sliders" class="text-amber-500 w-4 h-4"></i> Head Office Risk Management Panel</h2>
-                <p class="text-xs text-slate-400">Audit system parameters, monitor risk performance flags, and review blacklisted valuer boundaries.</p>
-            </div>
-
-            <div class="grid grid-cols-3 gap-6">
-                <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-                    <span class="text-xs font-semibold text-white flex items-center gap-2"><i data-lucide="alert-triangle" class="text-amber-400 w-4 h-4"></i> Valuer Rejection Flags</span>
-                    <div id="compliance-rejection-pane" class="space-y-2 text-xs max-h-[200px] overflow-y-auto custom-scroll">
-                        </div>
-                </div>
-
-                <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-                    <span class="text-xs font-semibold text-white flex items-center gap-2"><i data-lucide="shuffle" class="text-red-400 w-4 h-4"></i> Branch Proximity Violations</span>
-                    <div id="compliance-geofence-pane" class="space-y-2 text-xs max-h-[200px] overflow-y-auto custom-scroll">
-                        </div>
-                </div>
-
-                <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-                    <span class="text-xs font-semibold text-white flex items-center gap-2"><i data-lucide="award" class="text-blue-400 w-4 h-4"></i> Rating Metric Audit Matrix</span>
-                    <div id="compliance-rating-pane" class="space-y-2 text-xs max-h-[200px] overflow-y-auto custom-scroll">
-                        </div>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <script>
-        const GATEWAY_API = "https://bmv-cloud.onrender.com/api";
-
-        // Global data cache arrays
-        let globalBranches = [];
-        let globalGlos = [];
-        let globalAgencies = [];
-        let globalValuers = [];
-        let globalBookings = [];
-
-        function switchSystemTab(tabId) {
-            ['onboarding', 'operations', 'compliance'].forEach(t => {
-                document.getElementById(`view-${t}`).classList.add('hidden');
-                document.getElementById(`tab-btn-${t}`).classList.remove('bg-blue-600', 'text-white', 'shadow');
-                document.getElementById(`tab-btn-${t}`).classList.add('text-slate-400');
-            });
-            document.getElementById(`view-${tabId}`).classList.remove('hidden');
-            document.getElementById(`tab-btn-${tabId}`).classList.add('bg-blue-600', 'text-white', 'shadow');
-            document.getElementById(`tab-btn-${tabId}`).classList.remove('text-slate-400');
-            
-            if(tabId === 'operations' || tabId === 'compliance') {
-                runLiveProximityEvaluation();
-            }
-        }
-
-        // --- GLOBAL DATA RETRIEVAL ENGINE ARRAYS ---
-        async function queryCloudRegistryUpdates() {
-            try {
-                // 1. Fetch Branches
-                const bRes = await fetch(`${GATEWAY_API}/branches`);
-                globalBranches = await bRes.json();
-                document.getElementById('manifest-branches-pane').innerHTML = globalBranches.map(b => `
-                    <div class="p-2 bg-slate-950 border border-slate-850 rounded-lg">
-                        <div class="flex justify-between font-semibold text-slate-200"><span>${b.branchName}</span><span class="text-blue-400 font-mono">${b.branchCode}</span></div>
-                        <p class="text-[10px] text-slate-500 mt-0.5">Locality: ${b.locality} | Coords: [${[...(b.location?.coordinates || [])].reverse().join(', ')}]</p>
-                    </div>
-                `).join('');
-                
-                // Map fields to selectors dynamically
-                document.getElementById('ob-g-branch').innerHTML = globalBranches.map(b => `<option value="${b.branchCode}">${b.branchName} (${b.branchCode})</option>`).join('');
-                document.getElementById('op-case-branch').innerHTML = `<option value="">-- Choose Branch Target --</option>` + globalBranches.map(b => `<option value="${b.branchCode}">${b.branchName}</option>`).join('');
-
-                // 2. Fetch GLO Officers
-                const gRes = await fetch(`${GATEWAY_API}/glos`);
-                globalGlos = await gRes.json();
-                document.getElementById('manifest-glos-pane').innerHTML = globalGlos.map(g => `
-                    <div class="p-2 bg-slate-950 border border-slate-850 rounded-lg">
-                        <div class="flex justify-between font-semibold text-slate-200"><span>${g.fullName}</span><span class="text-purple-400 font-mono">${g.employeeId}</span></div>
-                        <p class="text-[10px] text-slate-500">Target Mapped Code: ${g.allocatedBranchCode}</p>
-                    </div>
-                `).join('');
-
-                // 3. Fetch Valuation Agencies
-                const aRes = await fetch(`${GATEWAY_API}/agencies`);
-                globalAgencies = await aRes.json();
-                document.getElementById('manifest-agencies-pane').innerHTML = globalAgencies.map(a => `
-                    <div class="p-2 bg-slate-950 border border-slate-850 rounded-lg">
-                        <div class="flex justify-between font-semibold text-slate-200"><span>${a.agencyName}</span><span class="text-amber-400 font-mono">${a.agencyId}</span></div>
-                        <p class="text-[10px] text-slate-500">Contact: ${a.officerName} | Mobile: ${a.contactMobile}</p>
-                    </div>
-                `).join('');
-                document.getElementById('ob-v-agency').innerHTML = globalAgencies.map(a => `<option value="${a.agencyId}">${a.agencyName}</option>`).join('');
-
-                // 4. Fetch Accredited Valuers
-                const vRes = await fetch(`${GATEWAY_API}/valuers`);
-                globalValuers = await vRes.json();
-                document.getElementById('manifest-valuers-pane').innerHTML = globalValuers.map(v => `
-                    <div class="p-2 bg-slate-950 border border-slate-850 rounded-lg">
-                        <div class="flex justify-between font-semibold text-slate-200"><span>${v.name}</span><span class="text-emerald-400 font-mono">${v.sysId}</span></div>
-                        <p class="text-[10px] text-slate-500">Status: ${v.status} | Agency: ${v.agencyId} | Rejections: ${v.rejectionsCount}</p>
-                    </div>
-                `).join('');
-
-                // 5. Fetch Active Bookings Ledger Flow
-                const bkRes = await fetch(`${GATEWAY_API}/bookings`);
-                globalBookings = await bkRes.json();
-                renderBookingsTable();
-                renderComplianceControls();
-
-            } catch (err) {
-                console.error("Cloud synchronization mapping dropped:", err);
-            }
-        }
-
-        // --- SUBMIT COMMIT METHODS DOWN TO CLOUD INSTANCE ---
-        async function commitBranchToAtlas() {
-            const code = document.getElementById('ob-b-code').value.trim();
-            const name = document.getElementById('ob-b-name').value.trim();
-            const locality = document.getElementById('ob-b-locality').value.trim();
-            const coordsStr = document.getElementById('ob-b-coords').value.trim();
-            const radius = document.getElementById('ob-b-radius').value.trim();
-            const hours = document.getElementById('ob-b-hours').value.trim();
-
-            if(!code || !name || !coordsStr) return alert("All key base fields require initialization.");
-            const splitGeo = coordsStr.split(',').map(c => parseFloat(c.trim()));
-
-            const payload = {
-                branchCode: code, branchName: name, locality: locality,
-                location: { type: "Point", coordinates: [splitGeo[1], splitGeo[0]] },
-                geofenceRadiusThreshold: radius || "50", operatingHoursWindow: hours || "09:00 AM - 06:00 PM"
-            };
-
-            const saveRes = await fetch(`${GATEWAY_API}/branches`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-            if (!saveRes.ok) { const errBody = await saveRes.json().catch(() => ({})); return alert("Not saved: " + (errBody.code === 11000 ? "this ID already exists." : (errBody.message || "server error."))); }
-            ['ob-b-code', 'ob-b-name', 'ob-b-locality', 'ob-b-coords', 'ob-b-radius', 'ob-b-hours'].forEach(id => document.getElementById(id).value = '');
-            queryCloudRegistryUpdates();
-        }
-
-        async function commitGloToAtlas() {
-            const id = document.getElementById('ob-g-id').value.trim();
-            const name = document.getElementById('ob-g-name').value.trim();
-            const phone = document.getElementById('ob-g-phone').value.trim();
-            const branch = document.getElementById('ob-g-branch').value;
-
-            if(!id || !name) return alert("Required parameters mapping fields empty.");
-            const payload = { employeeId: id, fullName: name, contactMobile: phone, allocatedBranchCode: branch };
-
-            const saveRes = await fetch(`${GATEWAY_API}/glos`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-            if (!saveRes.ok) { const errBody = await saveRes.json().catch(() => ({})); return alert("Not saved: " + (errBody.code === 11000 ? "this ID already exists." : (errBody.message || "server error."))); }
-            ['ob-g-id', 'ob-g-name', 'ob-g-phone'].forEach(id => document.getElementById(id).value = '');
-            queryCloudRegistryUpdates();
-        }
-
-        async function commitAgencyToAtlas() {
-            const id = document.getElementById('ob-a-id').value.trim();
-            const name = document.getElementById('ob-a-name').value.trim();
-            const officer = document.getElementById('ob-a-officer').value.trim();
-            const phone = document.getElementById('ob-a-phone').value.trim();
-
-            if(!id || !name) return alert("Agency profiling fields mandate inputs.");
-            const payload = { agencyId: id, agencyName: name, officerName: officer, contactMobile: phone };
-
-            const saveRes = await fetch(`${GATEWAY_API}/agencies`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-            if (!saveRes.ok) { const errBody = await saveRes.json().catch(() => ({})); return alert("Not saved: " + (errBody.code === 11000 ? "this ID already exists." : (errBody.message || "server error."))); }
-            ['ob-a-id', 'ob-a-name', 'ob-a-officer', 'ob-a-phone'].forEach(id => document.getElementById(id).value = '');
-            queryCloudRegistryUpdates();
-        }
-
-        async function commitValuerToAtlas() {
-            const id = document.getElementById('ob-v-id').value.trim();
-            const name = document.getElementById('ob-v-name').value.trim();
-            const coordsStr = document.getElementById('ob-v-coords').value.trim();
-            const agency = document.getElementById('ob-v-agency').value;
-
-            if(!id || !name || !coordsStr) return alert("Valuer parameters structure requires mapping.");
-            const splitGeo = coordsStr.split(',').map(c => parseFloat(c.trim()));
-
-            const payload = { sysId: id, name: name, lat: splitGeo[0], lng: splitGeo[1], agencyId: agency };
-
-            const saveRes = await fetch(`${GATEWAY_API}/valuers`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-            if (!saveRes.ok) { const errBody = await saveRes.json().catch(() => ({})); return alert("Not saved: " + (errBody.code === 11000 ? "this ID already exists." : (errBody.message || "server error."))); }
-            ['ob-v-id', 'ob-v-name', 'ob-v-coords'].forEach(id => document.getElementById(id).value = '');
-            queryCloudRegistryUpdates();
-        }
-
-        // --- OPERATIONS PROXIMITY CALCULATOR ENGINE ---
-        function calculateHaversineKM(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Earth radius in KM
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-
-        function runLiveProximityEvaluation() {
-            const targetBranchCode = document.getElementById('op-case-branch').value;
-            if(!targetBranchCode) {
-                document.getElementById('op-case-glo-display').innerText = "Select a branch to map its GLO";
-                document.getElementById('allocation-matrix-body').innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-500 italic">Select an originating branch asset to compile algorithmic options.</td></tr>`;
-                return;
-            }
-
-            const targetBranch = globalBranches.find(b => b.branchCode === targetBranchCode);
-            const activeGlo = globalGlos.find(g => g.allocatedBranchCode === targetBranchCode);
-            
-            document.getElementById('op-case-glo-display').innerText = activeGlo ? `${activeGlo.fullName} (${activeGlo.employeeId})` : "NO GLO ALLOCATED TO THIS HUB";
-
-            const bLat = targetBranch.location.coordinates[1]; // Longitude/Latitude sorting bypass handles inversion
-            const bLng = targetBranch.location.coordinates[0];
-
-            // Map and parse proximity distance values across valuers arrays
-            const evaluationOptions = globalValuers.map(v => {
-                const distance = calculateHaversineKM(bLat, bLng, v.lat, v.lng);
-                return { ...v, computedDistanceKM: distance };
-            }).sort((x, y) => x.computedDistanceKM - y.computedDistanceKM);
-
-            document.getElementById('allocation-matrix-body').innerHTML = evaluationOptions.map(v => {
-                const isBlacklisted = v.blacklistedBranchCodes?.includes(targetBranchCode);
-                let rowStatusStyle = "text-emerald-400 font-medium";
-                let actionBtnHTML = `<button onclick="allocateValuerJob('${v.sysId}', '${targetBranchCode}')" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-white font-medium">Assign</button>`;
-
-                if(v.status !== 'available') {
-                    rowStatusStyle = "text-slate-500 italic";
-                    actionBtnHTML = `<span class="text-[10px] text-slate-500 tracking-wide">Engaged in Field</span>`;
-                }
-                if(isBlacklisted) {
-                    rowStatusStyle = "text-red-500 font-bold uppercase";
-                    actionBtnHTML = `<span class="text-[10px] text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Blacklist Block</span>`;
-                }
-
-                return `
-                    <tr class="hover:bg-slate-850/50 transition-colors">
-                        <td class="py-3 font-semibold text-slate-200">${v.name} <span class="text-[10px] font-mono block text-slate-500">${v.sysId}</span></td>
-                        <td class="py-3 text-slate-400">${v.agencyId}</td>
-                        <td class="py-3 font-mono font-medium text-blue-400">${v.computedDistanceKM.toFixed(2)} KM</td>
-                        <td class="py-3 ${rowStatusStyle}">${isBlacklisted ? 'HO Blacklisted' : v.status}</td>
-                        <td class="py-3 text-right">${actionBtnHTML}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function executeAutomatedAllocationRoute() {
-            if (!document.getElementById('op-case-branch').value) return alert("Choose an originating branch first.");
-            runLiveProximityEvaluation();
-        }
-
-        async function allocateValuerJob(valuerId, branchCode) {
-            const weight = document.getElementById('op-case-weight').value || "100";
-            const payload = { branchCode: branchCode, valuerSysId: valuerId, goldWeightGrams: weight };
-
-            const response = await fetch(`${GATEWAY_API}/bookings`, {
-                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
-            });
-
-            if(response.ok) {
-                document.getElementById('op-case-weight').value = '';
-                queryCloudRegistryUpdates();
-            } else {
-                alert("Assignment engine error.");
-            }
-        }
-
-        function renderBookingsTable() {
-            document.getElementById('bookings-ledger-body').innerHTML = globalBookings.map(b => {
-                let statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">Assigned</span>`;
-                let actionBypassHTML = `
-                    <button onclick="updateBookingLifecycle('${b.bookingId}', 'accepted')" class="bg-emerald-600 hover:bg-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded mr-1">Accept</button>
-                    <button onclick="updateBookingLifecycle('${b.bookingId}', 'rejected')" class="bg-red-600 hover:bg-red-700 text-[10px] font-semibold px-2 py-0.5 rounded">Reject</button>
-                `;
-
-                if(b.status === 'accepted') {
-                    statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">Transit to Vault</span>`;
-                    actionBypassHTML = `<button onclick="updateBookingLifecycle('${b.bookingId}', 'completed')" class="bg-blue-600 hover:bg-blue-700 text-[10px] font-semibold px-2 py-0.5 rounded">Vault Verified</button>`;
-                } else if(b.status === 'completed') {
-                    statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Success Closed</span>`;
-                    actionBypassHTML = `<span class="text-slate-500 italic text-[10px]">Archived Settlement</span>`;
-                } else if(b.status === 'rejected') {
-                    statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-500/10 text-red-400 border border-red-500/20">Rejected By Valuer</span>`;
-                    actionBypassHTML = `<span class="text-slate-500 italic text-[10px]">Audit Log Triggered</span>`;
-                }
-
-                return `
-                    <tr class="hover:bg-slate-850/30 transition-all">
-                        <td class="py-2.5 font-mono text-slate-300 font-medium">${b.bookingId}</td>
-                        <td class="py-2.5 text-slate-400">${b.branchCode}</td>
-                        <td class="py-2.5 text-slate-300 font-medium">${b.valuerSysId}</td>
-                        <td class="py-2.5 font-mono text-slate-400">${b.goldWeightGrams}g</td>
-                        <td class="py-2.5">${statusBadge}</td>
-                        <td class="py-2.5 text-right">${actionBypassHTML}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        async function updateBookingLifecycle(bookingId, newState) {
-            await fetch(`${GATEWAY_API}/bookings/status`, {
-                method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bookingId: bookingId, status: newState })
-            });
-            queryCloudRegistryUpdates();
-        }
-
-        // --- HO COMPLIANCE AUDITING RENDERS ---
-        function renderComplianceControls() {
-            // Audit 1: Valuers with High Rejections
-            document.getElementById('compliance-rejection-pane').innerHTML = globalValuers.map(v => {
-                const alertLevel = v.rejectionsCount >= 3 ? 'text-red-400 font-bold bg-red-950/20' : 'text-slate-400';
-                return `
-                    <div class="p-2 bg-slate-950 border border-slate-850 rounded flex justify-between items-center ${alertLevel}">
-                        <div><span class="font-medium text-slate-200">${v.name}</span> <span class="text-[10px] font-mono block">${v.sysId}</span></div>
-                        <div class="text-right">
-                            <span class="block text-[10px] font-mono uppercase tracking-wider text-slate-500">Rejections</span>
-                            <span class="text-xs font-bold font-mono">${v.rejectionsCount}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            // Audit 2: High Value/Geofence Audit Logs
-            document.getElementById('compliance-geofence-pane').innerHTML = globalBookings.filter(b => b.status === 'completed').map(b => `
-                <div class="p-2 bg-slate-950 border border-slate-850 rounded space-y-1">
-                    <div class="flex justify-between font-mono text-[10px] text-slate-400"><span>ID: ${b.bookingId}</span><span class="text-emerald-400 font-bold">PASSED</span></div>
-                    <p class="text-[10px] text-slate-500">Biometric & GPS Timestamp Signature Confirmed inside Geofence Bounds.</p>
-                </div>
-            `).join('') || `<div class="text-center text-slate-600 py-6 italic">No closed audits logged today.</div>`;
-
-            // Audit 3: Agency Quality Matrices
-            document.getElementById('compliance-rating-pane').innerHTML = globalValuers.map(v => `
-                <div class="p-2 bg-slate-950 border border-slate-850 rounded flex justify-between items-center">
-                    <div><span class="font-medium text-slate-200">${v.name}</span> <span class="text-[10px] font-mono block text-slate-500">${v.agencyId}</span></div>
-                    <div class="flex items-center gap-1 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-amber-400 font-mono font-bold text-xs">
-                        <i data-lucide="star" class="w-3 h-3 fill-amber-400 text-amber-400"></i> 5.0
-                    </div>
-                </div>
-            `).join('');
-            lucide.createIcons();
-        }
-
-        window.onload = function() {
-            lucide.createIcons();
-            queryCloudRegistryUpdates();
-        }
-    </script>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+<!-- LOGIN -->
+<div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+  <div class="card w-full max-w-md p-6 space-y-5">
+    <div class="flex items-center gap-2">
+      <span class="p-2 bg-blue-500/10 rounded-lg border border-blue-500/30 text-blue-400"><i data-lucide="shield-check" class="w-5 h-5"></i></span>
+      <div><h1 class="text-lg font-bold">BookMyValuer</h1><p class="text-xs text-slate-400">Gold loan valuer booking platform</p></div>
+    </div>
+    <div>
+      <span class="lbl">Log in as</span>
+      <div id="role-picker" class="grid grid-cols-4 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs"></div>
+    </div>
+    <form id="login-form" class="space-y-3">
+      <div><label class="lbl" id="login-id-label">Employee ID</label><input id="login-id" class="inp" autocomplete="username" required></div>
+      <div><label class="lbl">Password</label><input id="login-pw" type="password" class="inp" autocomplete="current-password" required></div>
+      <p id="login-err" class="text-xs text-red-400 hidden"></p>
+      <button class="btn w-full bg-blue-600 hover:bg-blue-700 py-2.5 text-sm">Log in</button>
+    </form>
+    <details class="text-xs text-slate-400 border-t border-slate-800 pt-3">
+      <summary class="cursor-pointer">Demo accounts (password: demo123)</summary>
+      <div class="mt-2 space-y-1 font-mono text-[11px]">
+        <div>HO: HO001</div>
+        <div>GLO: GLO101–GLO110 (2 per branch)</div>
+        <div>Valuer: VAL001–VAL020 (VAL016–020 independent)</div>
+        <div>Agency: AG01, AG02, AG03</div>
+      </div>
+      <p class="mt-2">Each browser tab keeps its own login, so you can open GLO, Valuer and Agency side by side.</p>
+    </details>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <header class="bg-slate-900 border-b border-slate-800 px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40">
+    <div class="flex items-center gap-2">
+      <span class="p-1.5 bg-blue-500/10 rounded-lg border border-blue-500/30 text-blue-400"><i data-lucide="shield-check" class="w-4 h-4"></i></span>
+      <span class="font-bold">BookMyValuer</span>
+      <span id="role-badge" class="pill"></span>
+    </div>
+    <nav id="nav" class="flex flex-wrap gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs"></nav>
+    <div class="flex items-center gap-3 text-xs">
+      <button id="ratings-btn" class="btn bg-amber-500/10 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 hidden flex items-center gap-1"><i data-lucide="star" class="w-3.5 h-3.5"></i> Valuer ratings</button>
+      <div class="text-right"><div id="who-name" class="font-semibold"></div><div id="who-sub" class="text-slate-400 text-[11px]"></div></div>
+      <button id="logout-btn" class="btn bg-slate-800 hover:bg-slate-700 flex items-center gap-1"><i data-lucide="log-out" class="w-3.5 h-3.5"></i> Log out</button>
+    </div>
+  </header>
+  <main id="view" class="p-4 md:p-6 max-w-7xl mx-auto"></main>
+</div>
+
+<!-- POPUPS + MODAL -->
+<div id="toasts" class="fixed top-16 right-4 z-50 space-y-2 w-[340px] max-w-[calc(100vw-2rem)]"></div>
+<div id="modal" class="fixed inset-0 z-50 bg-black/60 hidden items-center justify-center p-4">
+  <div class="card w-full max-w-lg p-5 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-4"><h3 id="modal-title" class="font-bold"></h3><button onclick="closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+{
+const API = '/api';
+const ROLES = { glo: ['GLO', 'Employee ID', 'GLO101'], valuer: ['Valuer', 'Valuer ID', 'VAL001'], agency: ['Agency', 'Agency ID', 'AG01'], ho: ['Head Office', 'HO user ID', 'HO001'] };
+const ROLE_STYLE = { glo: 'text-purple-300 border-purple-500/40 bg-purple-500/10', valuer: 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10', agency: 'text-amber-300 border-amber-500/40 bg-amber-500/10', ho: 'text-blue-300 border-blue-500/40 bg-blue-500/10' };
+const STATUS = {
+  requested: ['Awaiting valuer', 'text-blue-300 border-blue-500/30 bg-blue-500/10'],
+  accepted: ['Valuation in progress', 'text-yellow-300 border-yellow-500/30 bg-yellow-500/10'],
+  completed: ['Valuation completed', 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'],
+  rejected: ['Declined by valuer', 'text-red-300 border-red-500/30 bg-red-500/10']
+};
+const EVENT_ICON = { requested: ['bell-ring', 'text-amber-300'], sent: ['send', 'text-blue-300'], accepted: ['check-circle', 'text-emerald-300'], rejected: ['x-circle', 'text-red-300'], completed: ['badge-check', 'text-emerald-300'], rated: ['star', 'text-amber-300'] };
+
+let session = null, token = null, currentTab = null, lastEventAt = null, pollTimer = null, loginRole = 'glo';
+const cache = {};
+
+// ---------- utils ----------
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const inr = n => n == null ? '—' : '₹' + Number(n).toLocaleString('en-IN');
+const stars = r => r == null ? '<span class="text-slate-500">No ratings</span>' : `<span class="text-amber-300">${'★'.repeat(Math.round(r))}${'☆'.repeat(5 - Math.round(r))}</span> <span class="text-slate-400">${Number(r).toFixed(1)}</span>`;
+const pill = s => `<span class="pill ${STATUS[s] ? STATUS[s][1] : ''}">${STATUS[s] ? STATUS[s][0] : esc(s)}</span>`;
+const time = d => d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+const icons = () => window.lucide && lucide.createIcons();
+const agencyName = id => id ? ((cache.agencies || []).find(a => a.agencyId === id)?.agencyName || id) : 'Independent';
+const valuerName = id => (cache.valuers || []).find(v => v.sysId === id)?.name || id;
+const branchName = code => (cache.branches || []).find(b => b.branchCode === code)?.branchName || code;
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, { ...opts, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && token) { logout(); throw new Error('Session expired. Please log in again.'); }
+  if (!res.ok) throw new Error(data.message || 'Something went wrong.');
+  return data;
+}
+function toast(title, message, type = 'info') {
+  const [icon, color] = EVENT_ICON[type] || ['info', 'text-blue-300'];
+  const el = document.createElement('div');
+  el.className = 'toast card p-3 shadow-2xl border-slate-700 flex gap-3';
+  el.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 shrink-0 ${color}"></i><div class="flex-1 text-xs"><div class="font-bold text-sm text-white">${esc(title)}</div><div class="text-slate-300 mt-0.5">${esc(message)}</div></div><button class="text-slate-500 hover:text-white self-start"><i data-lucide="x" class="w-4 h-4"></i></button>`;
+  el.querySelector('button').onclick = () => el.remove();
+  $('toasts').prepend(el);
+  while ($('toasts').children.length > 4) $('toasts').lastChild.remove();
+  icons();
+  setTimeout(() => el.remove(), 15000);
+}
+function beep() {
+  try { const c = new (window.AudioContext || window.webkitAudioContext)(), o = c.createOscillator(), g = c.createGain(); o.frequency.value = 880; g.gain.value = 0.05; o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + 0.15); } catch (e) {}
+}
+window.closeModal = () => { $('modal').classList.add('hidden'); $('modal').classList.remove('flex'); };
+function openModal(title, html, onSubmit) {
+  $('modal-title').textContent = title;
+  $('modal-body').innerHTML = html;
+  $('modal').classList.remove('hidden'); $('modal').classList.add('flex');
+  icons();
+  const form = $('modal-body').querySelector('form');
+  if (form && onSubmit) form.onsubmit = async e => {
+    e.preventDefault();
+    const btn = form.querySelector('button[type=submit]'); btn.disabled = true;
+    try { await onSubmit(new FormData(form)); closeModal(); } catch (err) { const p = form.querySelector('.form-err'); p.textContent = err.message; p.classList.remove('hidden'); btn.disabled = false; }
+  };
+  const first = $('modal-body').querySelector('input, textarea'); if (first) first.focus();
+}
+
+// ---------- login ----------
+function renderRolePicker() {
+  $('role-picker').innerHTML = Object.entries(ROLES).map(([r, [label]]) => `<button type="button" data-role="${r}" class="btn ${r === loginRole ? 'tab-on' : 'text-slate-400 hover:text-white'}">${label}</button>`).join('');
+  $('role-picker').querySelectorAll('button').forEach(b => b.onclick = () => { loginRole = b.dataset.role; renderRolePicker(); });
+  $('login-id-label').textContent = ROLES[loginRole][1];
+  $('login-id').placeholder = ROLES[loginRole][2];
+}
+$('login-form').onsubmit = async e => {
+  e.preventDefault();
+  $('login-err').classList.add('hidden');
+  try {
+    const r = await api('/login', { method: 'POST', body: { role: loginRole, id: $('login-id').value, password: $('login-pw').value } });
+    token = r.token; session = r.user;
+    try { sessionStorage.setItem('bmv_session', JSON.stringify(r)); } catch (e) {}
+    startApp();
+  } catch (err) { $('login-err').textContent = err.message; $('login-err').classList.remove('hidden'); }
+};
+function logout() {
+  token = null; session = null; clearInterval(pollTimer);
+  try { sessionStorage.removeItem('bmv_session'); } catch (e) {}
+  $('app').classList.add('hidden'); $('login-screen').classList.remove('hidden');
+  $('login-pw').value = '';
+}
+$('logout-btn').onclick = logout;
+$('ratings-btn').onclick = () => showRatings();
+
+// ---------- app shell ----------
+const TABS = {
+  glo: [['book', 'Book a valuer', 'map-pin'], ['bookings', 'My bookings', 'list'], ['onboarding', 'Onboarding', 'user-plus']],
+  valuer: [['requests', 'My requests', 'bell'], ['history', 'History', 'history']],
+  agency: [['team', 'My valuers', 'users'], ['bookings', 'Bookings', 'list']],
+  ho: [['overview', 'Overview', 'layout-dashboard'], ['bookings', 'All bookings', 'list'], ['compliance', 'Risk & compliance', 'sliders'], ['onboarding', 'Onboarding', 'user-plus']]
+};
+function startApp() {
+  $('login-screen').classList.add('hidden'); $('app').classList.remove('hidden');
+  $('role-badge').className = 'pill ' + ROLE_STYLE[session.role];
+  $('role-badge').textContent = ROLES[session.role][0];
+  $('who-name').textContent = session.name;
+  $('who-sub').textContent = session.role === 'glo' ? `${session.id} · ${session.branchName}` : session.role === 'valuer' ? `${session.id} · ${session.agencyId ? session.agencyId : 'Independent'}` : session.id;
+  $('ratings-btn').classList.toggle('hidden', session.role !== 'glo');
+  $('nav').innerHTML = TABS[session.role].map(([k, label, icon]) => `<button data-tab="${k}" class="btn flex items-center gap-1.5 text-slate-400 hover:text-white"><i data-lucide="${icon}" class="w-3.5 h-3.5"></i>${label}</button>`).join('');
+  $('nav').querySelectorAll('button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  lastEventAt = new Date().toISOString();
+  clearInterval(pollTimer); pollTimer = setInterval(poll, 4000);
+  showTab(TABS[session.role][0][0]);
+}
+async function showTab(tab) {
+  currentTab = tab;
+  $('nav').querySelectorAll('button').forEach(b => { const on = b.dataset.tab === tab; b.classList.toggle('tab-on', on); b.classList.toggle('text-slate-400', !on); });
+  await refresh();
+}
+async function loadDirectory() {
+  const [branches, agencies, valuers, glos] = await Promise.all([api('/branches'), api('/agencies'), api('/valuers'), session.role === 'valuer' ? [] : api('/glos')]);
+  Object.assign(cache, { branches, agencies, valuers, glos });
+}
+async function refresh() {
+  if (!session) return;
+  try {
+    await loadDirectory();
+    const views = { glo: { book: viewBook, bookings: viewGloBookings, onboarding: viewOnboarding }, valuer: { requests: viewValuerRequests, history: viewValuerHistory }, agency: { team: viewAgencyTeam, bookings: viewAgencyBookings }, ho: { overview: viewHoOverview, bookings: viewHoBookings, compliance: viewCompliance, onboarding: viewOnboarding } };
+    const active = document.activeElement;
+    if (active && $('view').contains(active) && /INPUT|SELECT|TEXTAREA/.test(active.tagName) && active.dataset.keep !== undefined) return; // don't wipe a form being typed in
+    await views[session.role][currentTab]();
+    icons();
+  } catch (err) { $('view').innerHTML = `<div class="card p-6 text-sm text-red-300">${esc(err.message)}</div>`; }
+}
+async function poll() {
+  if (!token) return;
+  try {
+    const events = await api('/events?after=' + encodeURIComponent(lastEventAt));
+    if (events.length) {
+      events.forEach(ev => toast(ev.title, ev.message, ev.type));
+      lastEventAt = events[events.length - 1].createdAt;
+      beep();
+      if (!$('modal').classList.contains('flex')) refresh();
+    }
+  } catch (e) {}
+}
+
+// ---------- shared pieces ----------
+function bookingRows(list, cols, actions) {
+  if (!list.length) return `<tr><td colspan="${cols.length + (actions ? 1 : 0)}" class="text-center text-slate-500 italic py-8">No bookings yet.</td></tr>`;
+  return list.map(b => `<tr class="border-t border-slate-800 hover:bg-slate-800/30">${cols.map(c => `<td>${c(b)}</td>`).join('')}${actions ? `<td class="text-right">${actions(b)}</td>` : ''}</tr>`).join('');
+}
+function table(headers, rows) {
+  return `<div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead><tr class="text-[10px] uppercase tracking-wider text-slate-400">${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+const C = {
+  id: b => `<span class="font-mono text-slate-300">${esc(b.bookingId)}</span><div class="text-[10px] text-slate-500">${time(b.requestedAt)}</div>`,
+  lan: b => `<span class="font-mono">${esc(b.lan || '—')}</span>`,
+  branch: b => esc(branchName(b.branchCode)),
+  valuer: b => `${esc(valuerName(b.valuerSysId))}<div class="text-[10px] text-slate-500">${esc(agencyName(b.agencyId))}</div>`,
+  gold: b => b.goldWeightGrams ? esc(b.goldWeightGrams) + ' g' : '—',
+  status: b => pill(b.status) + (b.status === 'accepted' && b.etaMins ? `<div class="text-[10px] text-slate-500 mt-1">ETA ${esc(b.etaMins)} min</div>` : ''),
+  value: b => `<span class="font-semibold">${inr(b.valuationAmount)}</span>`,
+  rating: b => b.rating ? stars(b.rating) : '—'
+};
+function stat(label, value, sub = '') { return `<div class="card p-4"><div class="text-[11px] text-slate-400">${label}</div><div class="text-2xl font-bold mt-1">${value}</div><div class="text-[11px] text-slate-500">${sub}</div></div>`; }
+
+// ---------- GLO ----------
+async function viewBook() {
+  const lan = $('bk-lan')?.value || '', wt = $('bk-wt')?.value || '';
+  const m = await api('/matches');
+  const rows = m.valuers.map(v => {
+    const ok = v.status === 'available' && !v.blacklisted;
+    const st = v.blacklisted ? '<span class="pill text-red-300 border-red-500/30">Blocked for branch</span>' : v.status === 'available' ? '<span class="pill text-emerald-300 border-emerald-500/30">Available</span>' : v.status === 'engaged' ? '<span class="pill text-yellow-300 border-yellow-500/30">On a job</span>' : '<span class="pill text-slate-400 border-slate-600">Offline</span>';
+    return `<tr class="border-t border-slate-800 hover:bg-slate-800/30"><td><div class="font-semibold">${esc(v.name)}</div><div class="text-[10px] font-mono text-slate-500">${esc(v.sysId)}</div></td><td>${esc(agencyName(v.agencyId))}</td><td class="font-mono text-blue-300">${v.distanceKm.toFixed(2)} km</td><td>${stars(v.avgRating)}</td><td>${st}</td><td class="text-right"><button class="btn bg-blue-600 hover:bg-blue-700" ${ok ? '' : 'disabled'} onclick="requestValuer('${esc(v.sysId)}')">Request</button></td></tr>`;
+  }).join('');
+  $('view').innerHTML = `
+  <div class="grid lg:grid-cols-3 gap-5">
+    <div class="card p-5 space-y-4 h-fit">
+      <div><div class="text-[11px] text-slate-400">Your branch</div><div class="font-bold">${esc(m.branch.branchName)}</div><div class="text-xs text-slate-400">${esc(m.branch.locality)} · ${esc(m.branch.branchCode)}</div></div>
+      <div><label class="lbl">Loan account number (LAN) *</label><input id="bk-lan" data-keep class="inp font-mono" placeholder="e.g. GL2026001234" value="${esc(lan)}"></div>
+      <div><label class="lbl">Gold weight estimate (grams)</label><input id="bk-wt" data-keep type="number" class="inp" placeholder="e.g. 140" value="${esc(wt)}"></div>
+      <p class="text-[11px] text-slate-500">Enter the LAN, then pick a valuer from the list. Valuers who declined your earlier requests are hidden${m.hiddenAfterRejection ? ` (${m.hiddenAfterRejection} hidden)` : ''}.</p>
+    </div>
+    <div class="card p-5 lg:col-span-2">
+      <div class="flex justify-between items-center mb-3"><h2 class="font-bold">Valuers near you</h2><span class="text-xs text-slate-400">${m.valuers.filter(v => v.status === 'available').length} available · sorted by distance</span></div>
+      ${table(['Valuer', 'Agency', 'Distance', 'Rating', 'Status', ''], rows)}
+    </div>
+  </div>`;
+}
+window.requestValuer = async sysId => {
+  const lan = $('bk-lan').value.trim();
+  if (!lan) { toast('LAN required', 'Enter the loan account number before requesting a valuer.', 'rejected'); $('bk-lan').focus(); return; }
+  try {
+    await api('/bookings', { method: 'POST', body: { valuerSysId: sysId, lan, goldWeightGrams: $('bk-wt').value } });
+    $('bk-lan').value = ''; $('bk-wt').value = '';
+    await poll(); refresh();
+  } catch (err) { toast('Could not send request', err.message, 'rejected'); }
+};
+async function viewGloBookings() {
+  const list = await api('/bookings');
+  $('view').innerHTML = `<div class="card p-5"><h2 class="font-bold mb-3">Bookings at ${esc(session.branchName)}</h2>${table(['Booking', 'LAN', 'Valuer', 'Gold', 'Status', 'Valuation', 'Rating', ''],
+    bookingRows(list, [C.id, C.lan, C.valuer, C.gold, C.status, C.value, C.rating], b => b.status === 'completed' && !b.rating ? `<button class="btn bg-amber-500 hover:bg-amber-600 text-slate-950" onclick="rateBooking('${esc(b.bookingId)}')">Rate valuer</button>` : ''))}</div>`;
+}
+window.rateBooking = id => {
+  openModal('Rate the valuer', `<form class="space-y-4">
+    <div class="flex gap-2 text-3xl" id="star-row">${[1, 2, 3, 4, 5].map(n => `<label class="cursor-pointer"><input type="radio" name="rating" value="${n}" class="sr-only" required><span data-n="${n}" class="text-slate-600 hover:text-amber-300">★</span></label>`).join('')}</div>
+    <div><label class="lbl">Comment (optional)</label><textarea name="comment" class="inp" rows="2" placeholder="Arrived on time, careful testing"></textarea></div>
+    <p class="form-err text-xs text-red-400 hidden"></p>
+    <button type="submit" class="btn w-full bg-amber-500 hover:bg-amber-600 text-slate-950 py-2.5">Submit rating</button></form>`,
+    async fd => { await api(`/bookings/${id}/rate`, { method: 'POST', body: { rating: fd.get('rating'), comment: fd.get('comment') } }); refresh(); });
+  $('star-row').querySelectorAll('input').forEach(r => r.onchange = () => $('star-row').querySelectorAll('span').forEach(s => s.className = Number(s.dataset.n) <= Number(r.value) ? 'text-amber-300' : 'text-slate-600'));
+};
+async function showRatings() {
+  const rows = await api('/ratings');
+  openModal('Valuer ratings', `<div class="space-y-2 text-xs">${rows.map(r => `<div class="flex justify-between items-center p-2 bg-slate-950 rounded-lg border border-slate-800"><div><div class="font-semibold">${esc(r.name)}</div><div class="text-[10px] text-slate-500">${esc(r.sysId)} · ${esc(agencyName(r.agencyId))} · ${r.completed} done</div></div><div class="text-right">${stars(r.avgRating)}<div class="text-[10px] text-slate-500">${r.ratingCount} rating${r.ratingCount === 1 ? '' : 's'}</div></div></div>`).join('')}</div>`);
+}
+
+// ---------- Onboarding (GLO + HO) ----------
+async function viewOnboarding() {
+  const branchOpts = cache.branches.map(b => `<option value="${esc(b.branchCode)}" ${session.branchCode === b.branchCode ? 'selected' : ''}>${esc(b.branchName)} (${esc(b.branchCode)})</option>`).join('');
+  const agencyOpts = `<option value="">Independent (no agency)</option>` + cache.agencies.map(a => `<option value="${esc(a.agencyId)}">${esc(a.agencyName)}</option>`).join('');
+  const f = (name, label, ph = '', req = false) => `<div><label class="lbl">${label}${req ? ' *' : ''}</label><input name="${name}" data-keep class="inp" placeholder="${ph}" ${req ? 'required' : ''}></div>`;
+  const box = (key, title, color, fields) => `<form data-kind="${key}" class="card p-4 space-y-2.5"><div class="text-xs font-bold ${color} border-b border-slate-800 pb-2">${title}</div>${fields}<p class="form-err text-xs text-red-400 hidden"></p><button class="btn w-full bg-slate-800 hover:bg-slate-700">Save</button></form>`;
+  const list = (title, items) => `<div class="card p-3"><div class="text-[11px] text-slate-400 mb-2">${title} (${items.length})</div><div class="space-y-1 max-h-40 overflow-y-auto text-xs">${items.join('')}</div></div>`;
+  $('view').innerHTML = `<div class="grid lg:grid-cols-3 gap-5"><div class="lg:col-span-2 grid md:grid-cols-2 gap-4">
+    ${box('branch', 'Branch', 'text-blue-300', f('branchCode', 'Branch code', 'DEMO0006', true) + f('branchName', 'Branch name', 'HSR Layout Branch', true) + f('locality', 'Locality', 'HSR Layout, Bengaluru') + f('coords', 'Coordinates (lat, lng)', '12.9116, 77.6474', true) + f('geofenceRadiusThreshold', 'Geofence radius (m)', '50') + f('operatingHoursWindow', 'Operating hours', '09:30 AM - 04:30 PM'))}
+    ${box('glo', 'GLO', 'text-purple-300', f('employeeId', 'Employee ID', 'GLO111', true) + f('fullName', 'Full name', '', true) + f('contactMobile', 'Mobile') + f('email', 'Email') + `<div><label class="lbl">Role</label><select name="roleDesignation" class="inp"><option>Primary GLO</option><option>Backup GLO</option><option>Branch Manager</option></select></div><div><label class="lbl">Branch *</label><select name="allocatedBranchCode" class="inp">${branchOpts}</select></div>`)}
+    ${box('agency', 'Valuer agency', 'text-amber-300', f('agencyId', 'Agency registration ID', 'AG04', true) + f('agencyName', 'Agency name', '', true) + f('officerName', 'Nodal officer') + f('contactMobile', 'Nodal officer mobile') + f('email', 'Nodal officer email'))}
+    ${box('valuer', 'Valuer', 'text-emerald-300', f('sysId', 'Valuer ID', 'VAL021', true) + f('name', 'Full name', '', true) + f('contactMobile', 'Mobile') + f('coords', 'Current location (lat, lng)', '12.93, 77.62', true) + `<div><label class="lbl">Agency</label><select name="agencyId" class="inp">${agencyOpts}</select></div>`)}
+    <p class="md:col-span-2 text-[11px] text-slate-500">New GLO, agency and valuer accounts can log in with the password <span class="font-mono">demo123</span>.</p>
+  </div><div class="space-y-3">
+    ${list('Branches', cache.branches.map(b => `<div class="flex justify-between"><span>${esc(b.branchName)}</span><span class="font-mono text-slate-500">${esc(b.branchCode)}</span></div>`))}
+    ${list('GLOs', cache.glos.map(g => `<div class="flex justify-between"><span>${esc(g.fullName)}</span><span class="font-mono text-slate-500">${esc(g.employeeId)} · ${esc(g.allocatedBranchCode)}</span></div>`))}
+    ${list('Agencies', cache.agencies.map(a => `<div class="flex justify-between"><span>${esc(a.agencyName)}</span><span class="font-mono text-slate-500">${esc(a.agencyId)}</span></div>`))}
+    ${list('Valuers', cache.valuers.map(v => `<div class="flex justify-between"><span>${esc(v.name)}</span><span class="font-mono text-slate-500">${esc(v.sysId)} · ${esc(v.agencyId || 'Indep.')}</span></div>`))}
+  </div></div>`;
+  $('view').querySelectorAll('form[data-kind]').forEach(form => form.onsubmit = async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(form)); const kind = form.dataset.kind; const err = form.querySelector('.form-err'); err.classList.add('hidden');
+    try {
+      if (d.coords !== undefined) { const [lat, lng] = d.coords.split(',').map(s => parseFloat(s)); if (isNaN(lat) || isNaN(lng)) throw new Error('Coordinates must look like 12.93, 77.62'); delete d.coords; if (kind === 'branch') d.location = { type: 'Point', coordinates: [lng, lat] }; else Object.assign(d, { lat, lng }); }
+      const path = { branch: '/branches', glo: '/glos', agency: '/agencies', valuer: '/valuers' }[kind];
+      await api(path, { method: 'POST', body: d });
+      form.reset(); document.activeElement.blur(); toast('Saved', `${kind === 'glo' ? 'GLO' : kind[0].toUpperCase() + kind.slice(1)} added.`, 'completed'); refresh();
+    } catch (ex) { err.textContent = ex.message; err.classList.remove('hidden'); }
+  });
+}
+
+// ---------- Valuer ----------
+async function valuerHeader() {
+  const [me, ratings] = await Promise.all([api('/valuers/me'), api('/ratings')]);
+  const mine = ratings.find(r => r.sysId === session.id) || {};
+  const online = me.status !== 'offline';
+  return `<div class="card p-4 flex flex-wrap items-center justify-between gap-3 mb-5">
+    <div class="flex items-center gap-3"><span class="w-3 h-3 rounded-full ${me.status === 'available' ? 'bg-emerald-400 animate-pulse' : me.status === 'engaged' ? 'bg-yellow-400' : 'bg-slate-500'}"></span>
+      <div><div class="font-bold">${me.status === 'available' ? 'Online · available for requests' : me.status === 'engaged' ? 'On a job' : 'Offline'}</div><div class="text-xs text-slate-400">My rating: ${stars(mine.avgRating)} · ${mine.completed || 0} valuations done</div></div></div>
+    <button class="btn ${online ? 'bg-slate-800 hover:bg-slate-700' : 'bg-emerald-600 hover:bg-emerald-700'}" ${me.status === 'engaged' ? 'disabled' : ''} onclick="setAvailability('${online ? 'offline' : 'available'}')">${online ? 'Check out (go offline)' : 'Check in (go online)'}</button></div>`;
+}
+window.setAvailability = async s => { try { await api('/valuers/me/status', { method: 'POST', body: { status: s } }); refresh(); } catch (e) { toast('Not changed', e.message, 'rejected'); } };
+async function viewValuerRequests() {
+  const [head, list] = await Promise.all([valuerHeader(), api('/bookings')]);
+  const open = list.filter(b => b.status === 'requested' || b.status === 'accepted');
+  const cards = open.map(b => `<div class="card p-4 space-y-3 ${b.status === 'requested' ? 'border-amber-500/50' : 'border-yellow-500/40'}">
+    <div class="flex justify-between items-start"><div><div class="text-[11px] text-slate-400">${esc(b.bookingId)} · ${time(b.requestedAt)}</div><div class="font-bold text-lg">${esc(branchName(b.branchCode))}</div></div>${pill(b.status)}</div>
+    <div class="grid grid-cols-3 gap-2 text-xs"><div><div class="lbl">LAN</div><div class="font-mono">${esc(b.lan)}</div></div><div><div class="lbl">Gold</div>${C.gold(b)}</div><div><div class="lbl">Distance</div>${b.distanceKm ?? '—'} km</div></div>
+    ${b.status === 'requested' ? `<div class="flex gap-2"><input id="eta-${esc(b.bookingId)}" data-keep type="number" class="inp w-28" placeholder="ETA (min)" value="${Math.max(5, Math.round((b.distanceKm || 1) * 4))}"><button class="btn flex-1 bg-emerald-600 hover:bg-emerald-700" onclick="acceptReq('${esc(b.bookingId)}')">Accept</button><button class="btn flex-1 bg-red-600/80 hover:bg-red-600" onclick="rejectReq('${esc(b.bookingId)}')">Decline</button></div>`
+      : `<button class="btn w-full bg-emerald-600 hover:bg-emerald-700 py-2.5" onclick="completeReq('${esc(b.bookingId)}')">Valuation completed</button>`}
+  </div>`).join('');
+  $('view').innerHTML = head + `<div class="grid md:grid-cols-2 gap-4">${cards || '<div class="card p-8 text-center text-slate-500 text-sm md:col-span-2">No open requests. New requests will pop up here.</div>'}</div>`;
+}
+window.acceptReq = async id => { try { await api(`/bookings/${id}/accept`, { method: 'POST', body: { etaMins: $('eta-' + id)?.value } }); refresh(); } catch (e) { toast('Could not accept', e.message, 'rejected'); } };
+window.rejectReq = async id => { try { await api(`/bookings/${id}/reject`, { method: 'POST' }); refresh(); } catch (e) { toast('Could not decline', e.message, 'rejected'); } };
+window.completeReq = id => openModal('Valuation completed', `<form class="space-y-4">
+  <p class="text-xs text-slate-400">Enter the assessed value of the gold for booking ${esc(id)}.</p>
+  <div><label class="lbl">Valuation amount (₹) *</label><input name="amount" type="number" min="1" step="1" class="inp text-lg font-semibold" placeholder="e.g. 845000" required></div>
+  <p class="form-err text-xs text-red-400 hidden"></p>
+  <button type="submit" class="btn w-full bg-emerald-600 hover:bg-emerald-700 py-2.5">Submit valuation</button></form>`,
+  async fd => { await api(`/bookings/${id}/complete`, { method: 'POST', body: { valuationAmount: fd.get('amount') } }); refresh(); });
+async function viewValuerHistory() {
+  const [head, list] = await Promise.all([valuerHeader(), api('/bookings')]);
+  $('view').innerHTML = head + `<div class="card p-5">${table(['Booking', 'Branch', 'LAN', 'Gold', 'Status', 'Valuation', 'Rating'], bookingRows(list, [C.id, C.branch, C.lan, C.gold, C.status, C.value, C.rating]))}</div>`;
+}
+
+// ---------- Agency ----------
+async function viewAgencyTeam() {
+  const [ratings, list] = await Promise.all([api('/ratings'), api('/bookings')]);
+  const rmap = Object.fromEntries(ratings.map(r => [r.sysId, r]));
+  const rows = cache.valuers.map(v => { const r = rmap[v.sysId] || {}; const st = { available: 'text-emerald-300 border-emerald-500/30', engaged: 'text-yellow-300 border-yellow-500/30', offline: 'text-slate-400 border-slate-600' }[v.status] || ''; return `<tr class="border-t border-slate-800"><td><div class="font-semibold">${esc(v.name)}</div><div class="text-[10px] font-mono text-slate-500">${esc(v.sysId)}</div></td><td><span class="pill ${st}">${esc(v.status)}</span></td><td>${stars(r.avgRating)}</td><td>${r.completed || 0}</td><td>${v.rejectionsCount}</td></tr>`; }).join('');
+  const active = list.filter(b => b.status === 'requested' || b.status === 'accepted').length;
+  $('view').innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">${stat('Valuers', cache.valuers.length)}${stat('Available now', cache.valuers.filter(v => v.status === 'available').length)}${stat('Active jobs', active)}${stat('Completed', list.filter(b => b.status === 'completed').length)}</div>
+  <div class="card p-5"><h2 class="font-bold mb-3">${esc(session.name)} · valuers</h2>${table(['Valuer', 'Status', 'Rating', 'Completed', 'Declines'], rows)}</div>`;
+}
+async function viewAgencyBookings() {
+  const list = await api('/bookings');
+  $('view').innerHTML = `<div class="card p-5"><h2 class="font-bold mb-3">Bookings for your valuers</h2>${table(['Booking', 'Branch', 'LAN', 'Valuer', 'Status', 'Valuation', 'Rating'], bookingRows(list, [C.id, C.branch, C.lan, C.valuer, C.status, C.value, C.rating]))}</div>`;
+}
+
+// ---------- HO ----------
+async function viewHoOverview() {
+  const list = await api('/bookings');
+  const by = s => list.filter(b => b.status === s).length;
+  const responded = list.filter(b => b.respondedAt);
+  const avgResp = responded.length ? Math.round(responded.reduce((s, b) => s + (new Date(b.respondedAt) - new Date(b.requestedAt)), 0) / responded.length / 1000) : null;
+  const done = list.filter(b => b.completedAt);
+  const avgTat = done.length ? Math.round(done.reduce((s, b) => s + (new Date(b.completedAt) - new Date(b.requestedAt)), 0) / done.length / 60000) : null;
+  const total = done.reduce((s, b) => s + (b.valuationAmount || 0), 0);
+  $('view').innerHTML = `<div class="flex justify-between items-center mb-4"><h2 class="font-bold">Network overview</h2><button class="btn bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30" onclick="resetDemo()">Reset demo data</button></div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">${stat('Branches', cache.branches.length, `${cache.glos.length} GLOs`)}${stat('Valuers', cache.valuers.length, `${cache.valuers.filter(v => v.status === 'available').length} available now`)}${stat('Agencies', cache.agencies.length, `${cache.valuers.filter(v => !v.agencyId).length} independent valuers`)}${stat('Value assessed', inr(total), `${done.length} completed valuations`)}</div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">${stat('Awaiting valuer', by('requested'))}${stat('In progress', by('accepted'))}${stat('Avg response time', avgResp == null ? '—' : avgResp + ' s', 'request to accept/decline')}${stat('Avg turnaround', avgTat == null ? '—' : avgTat + ' min', 'request to valuation completed')}</div>
+  <div class="card p-5"><h3 class="font-bold mb-3 text-sm">Latest bookings</h3>${table(['Booking', 'Branch', 'LAN', 'Valuer', 'Status', 'Valuation'], bookingRows(list.slice(0, 8), [C.id, C.branch, C.lan, C.valuer, C.status, C.value]))}</div>`;
+}
+window.resetDemo = () => openModal('Reset demo data?', `<form class="space-y-3"><p class="text-sm text-slate-300">This deletes all branches, users, valuers, bookings and ratings, and recreates the demo set: 5 branches, 10 GLOs, 3 agencies, 20 valuers. All passwords become demo123. This cannot be undone.</p><p class="form-err text-xs text-red-400 hidden"></p><button type="submit" class="btn w-full bg-red-600 hover:bg-red-700 py-2.5">Delete everything and reset</button></form>`,
+  async () => { await api('/admin/reset-demo', { method: 'POST' }); toast('Demo data reset', '5 branches, 10 GLOs, 3 agencies and 20 valuers created.', 'completed'); refresh(); });
+async function viewHoBookings() {
+  const list = await api('/bookings');
+  $('view').innerHTML = `<div class="card p-5"><h2 class="font-bold mb-3">All bookings</h2>${table(['Booking', 'Branch', 'GLO', 'LAN', 'Valuer', 'Gold', 'Status', 'Valuation', 'Rating'], bookingRows(list, [C.id, C.branch, b => esc(b.gloId), C.lan, C.valuer, C.gold, C.status, C.value, C.rating]))}</div>`;
+}
+async function viewCompliance() {
+  const ratings = await api('/ratings');
+  const flagged = ratings.filter(r => r.rejectionsCount > 0).sort((a, b) => b.rejectionsCount - a.rejectionsCount);
+  const blocked = cache.valuers.filter(v => v.blacklistedBranchCodes?.length);
+  $('view').innerHTML = `<div class="grid lg:grid-cols-3 gap-5">
+    <div class="card p-4"><h3 class="font-bold text-sm mb-1">Declines by valuer</h3><p class="text-[11px] text-slate-500 mb-3">3 or more declines blocks the valuer for that branch.</p><div class="space-y-1.5 text-xs">${flagged.map(r => `<div class="flex justify-between p-2 rounded bg-slate-950 border ${r.rejectionsCount >= 3 ? 'border-red-500/40 text-red-300' : 'border-slate-800'}"><span>${esc(r.name)} <span class="font-mono text-slate-500">${esc(r.sysId)}</span></span><span class="font-bold">${r.rejectionsCount}</span></div>`).join('') || '<p class="text-slate-500 italic">No declines yet.</p>'}</div></div>
+    <div class="card p-4"><h3 class="font-bold text-sm mb-3">Blocked valuer–branch pairs</h3><div class="space-y-1.5 text-xs">${blocked.map(v => `<div class="p-2 rounded bg-slate-950 border border-red-500/30"><div class="font-semibold">${esc(v.name)}</div><div class="text-slate-400">${v.blacklistedBranchCodes.map(c => esc(branchName(c))).join(', ')}</div></div>`).join('') || '<p class="text-slate-500 italic">None.</p>'}</div></div>
+    <div class="card p-4"><h3 class="font-bold text-sm mb-3">Valuer ratings</h3><div class="space-y-1.5 text-xs max-h-[420px] overflow-y-auto">${ratings.map(r => `<div class="flex justify-between items-center p-2 rounded bg-slate-950 border border-slate-800"><span>${esc(r.name)}<div class="text-[10px] text-slate-500">${esc(agencyName(r.agencyId))}</div></span><span class="text-right">${stars(r.avgRating)}<div class="text-[10px] text-slate-500">${r.ratingCount} ratings</div></span></div>`).join('')}</div></div>
+  </div>`;
+}
+
+// ---------- boot ----------
+renderRolePicker();
+icons();
+try { const saved = JSON.parse(sessionStorage.getItem('bmv_session') || 'null'); if (saved) { token = saved.token; session = saved.user; startApp(); } } catch (e) {}
+}
+</script>
 </body>
 </html>
