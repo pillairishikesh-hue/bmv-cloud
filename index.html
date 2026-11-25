@@ -23,6 +23,7 @@
   .toast { animation: slideIn .25s ease-out; }
   table td, table th { padding: 8px 6px; }
   .leaflet-container { z-index: 0; background: #0b1220; font-family: inherit; }
+  .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); } /* dark look for standard OSM tiles */
   .leaflet-tooltip { background: #0f172a; color: #e2e8f0; border: 1px solid #334155; font-size: 11px; }
   .leaflet-tooltip-top:before { border-top-color: #334155; }
 </style>
@@ -159,7 +160,7 @@ let maps = [], trackTimers = [];
 function cleanupMaps() { trackTimers.forEach(clearInterval); trackTimers = []; maps.forEach(m => { try { m.remove(); } catch (e) {} }); maps = []; }
 function makeMap(el, center, zoom = 13) {
   const m = L.map(el).setView(center, zoom);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19 }).addTo(m);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(m);
   maps.push(m); setTimeout(() => m.invalidateSize(), 60);
   return m;
 }
