@@ -1,4 +1,4 @@
-// BookMyValuer API + web app server (v3: face check-in + live tracking)
+// BookMyValuer API + web app server (v4: ref IDs, item weights, bank/GLO on requests)
 // Roles: ho (head office), glo (gold loan officer), valuer, agency
 const express = require('express');
 const mongoose = require('mongoose');
@@ -22,6 +22,7 @@ mongoose.connect(mongoURI)
 // Token signing secret: TOKEN_SECRET if set, otherwise derived from the DB connection string (stable across restarts).
 const TOKEN_SECRET = process.env.TOKEN_SECRET || crypto.createHash('sha256').update('bmv:' + (mongoURI || 'local')).digest('hex');
 const DEFAULT_PASSWORD = 'demo123';
+const DEMO_BANK = 'Aurum Bank Ltd (Demo)'; // dummy bank name for the demo data
 
 // ---------- Schemas ----------
 const branchSchema = new mongoose.Schema({
@@ -83,6 +84,7 @@ const HoUser = mongoose.model('HO', hoSchema);
 
 const bookingSchema = new mongoose.Schema({
   bookingId: { type: String, unique: true, required: true },
+  refId: String, // auto-generated reference for the LAN, e.g. REF-261127-0003
   branchCode: String,
   gloId: String,
   valuerSysId: String,
@@ -103,6 +105,10 @@ const bookingSchema = new mongoose.Schema({
   faceAttempts: { type: Number, default: 0 },
   checkinDistanceM: Number,
   valuationAmount: Number,
+  itemCount: Number,
+  grossWeightG: Number,
+  stoneWeightG: Number,
+  netWeightG: Number,
   rating: Number,
   ratingComment: String,
   requestedAt: { type: Date, default: Date.now },
@@ -190,6 +196,17 @@ function currentPosition(b, v, branch) {
   return { lat: b.startLat + (bLat - b.startLat) * e, lng: b.startLng + (bLng - b.startLng) * e, progress: p };
 }
 const inr = n => '₹' + Number(n).toLocaleString('en-IN');
+const IST_MS = 5.5 * 3600 * 1000;
+function istDayStart(date) { const d = new Date(date.getTime() + IST_MS); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - IST_MS); }
+function refPrefix(date) { return 'REF-' + new Date(date.getTime() + IST_MS).toISOString().slice(2, 10).replace(/-/g, ''); }
+// Next reference ID for today (IST): REF-YYMMDD-0001, -0002, ...
+async function nextRefId(now = new Date()) {
+  const prefix = refPrefix(now);
+  const last = await Booking.findOne({ refId: new RegExp('^' + prefix + '-') }).sort({ refId: -1 }).select('refId').lean();
+  const n = last ? parseInt(last.refId.split('-')[2], 10) : 0;
+  return `${prefix}-${String(n + 1).padStart(4, '0')}`;
+}
+const num = v => { const n = Number(String(v ?? '').replace(/[^0-9.]/g, '')); return isFinite(n) ? n : NaN; };
 
 // ---------- Auth ----------
 app.post('/api/login', wrap(async (req, res) => {
@@ -259,11 +276,15 @@ app.get('/api/matches', auth('glo'), wrap(async (req, res) => {
 app.get('/api/bookings', auth(), wrap(async (req, res) => {
   const u = req.user;
   const filter = u.role === 'glo' ? { branchCode: u.branchCode } : u.role === 'valuer' ? { valuerSysId: u.id } : u.role === 'agency' ? { agencyId: u.id } : {};
-  res.json(await Booking.find(filter).select('-checkinPhoto').sort({ requestedAt: -1 }).limit(200));
+  const list = await Booking.find(filter).select('-checkinPhoto').sort({ requestedAt: -1 }).limit(500).lean();
+  const [glos, branches] = await Promise.all([GloUser.find({ employeeId: { $in: [...new Set(list.map(b => b.gloId))] } }).select('employeeId fullName').lean(), Branch.find({ branchCode: { $in: [...new Set(list.map(b => b.branchCode))] } }).select('branchCode bankName').lean()]);
+  const gloName = Object.fromEntries(glos.map(g => [g.employeeId, g.fullName]));
+  const bankName = Object.fromEntries(branches.map(b => [b.branchCode, b.bankName || DEMO_BANK]));
+  res.json(list.map(b => ({ ...b, gloName: gloName[b.gloId] || b.gloId, bankName: bankName[b.branchCode] || DEMO_BANK })));
 }));
 
 app.post('/api/bookings', auth('glo'), wrap(async (req, res) => {
-  const { valuerSysId, lan, goldWeightGrams } = req.body;
+  const { valuerSysId, lan } = req.body;
   if (!lan || !String(lan).trim()) return res.status(400).json({ message: 'Loan Account Number (LAN) is required.' });
   const v = await Valuer.findOne({ sysId: valuerSysId });
   if (!v) return res.status(400).json({ message: 'Valuer not found.' });
@@ -272,14 +293,14 @@ app.post('/api/bookings', auth('glo'), wrap(async (req, res) => {
   if (v.blacklistedBranchCodes.includes(branch.branchCode)) return res.status(400).json({ message: 'This valuer is blocked for your branch.' });
   const [bLng, bLat] = branch.location.coordinates;
   const booking = await Booking.create({
-    bookingId: 'BK-' + Math.floor(100000 + Math.random() * 900000),
+    bookingId: 'BK-' + Math.floor(100000 + Math.random() * 900000), refId: await nextRefId(),
     branchCode: branch.branchCode, gloId: req.user.id, valuerSysId: v.sysId, agencyId: v.agencyId,
-    lan: String(lan).trim(), goldWeightGrams: goldWeightGrams || '', distanceKm: Math.round(km(bLat, bLng, v.lat, v.lng) * 100) / 100
+    lan: String(lan).trim(), distanceKm: Math.round(km(bLat, bLng, v.lat, v.lng) * 100) / 100
   });
   v.status = 'engaged'; await v.save();
   await notify([`valuer:${v.sysId}`, v.agencyId && `agency:${v.agencyId}`, 'ho'], 'requested', 'New valuation request',
-    `${branch.branchName}: LAN ${booking.lan}, ${booking.goldWeightGrams || '?'} g gold, ${booking.distanceKm} km away. Requested by ${req.user.name}.`, booking.bookingId);
-  await notify([`glo:${req.user.id}`], 'sent', 'Request sent', `Request ${booking.bookingId} sent to ${v.name}. Waiting for them to accept.`, booking.bookingId);
+    `${branch.bankName || DEMO_BANK}, ${branch.branchName}: LAN ${booking.lan} (${booking.refId}), ${booking.distanceKm} km away. Requested by ${req.user.name}.`, booking.bookingId);
+  await notify([`glo:${req.user.id}`], 'sent', 'Request sent', `${booking.refId} for LAN ${booking.lan} sent to ${v.name}. Waiting for them to accept.`, booking.bookingId);
   res.status(201).json(booking);
 }));
 
@@ -316,12 +337,17 @@ app.post('/api/bookings/:id/reject', auth('valuer'), wrap(async (req, res) => {
 app.post('/api/bookings/:id/complete', auth('valuer'), wrap(async (req, res) => {
   const b = await loadForValuer(req);
   if (b.status !== 'in_progress') return res.status(400).json({ message: 'Only a valuation in progress can be completed.' });
-  const amount = Number(String(req.body.valuationAmount || '').replace(/[^0-9.]/g, ''));
-  if (!amount || amount <= 0) return res.status(400).json({ message: 'Enter the valuation amount.' });
-  b.status = 'completed'; b.valuationAmount = amount; b.completedAt = new Date(); await b.save();
+  const amount = num(req.body.valuationAmount), items = num(req.body.itemCount), gross = num(req.body.grossWeightG), stone = num(req.body.stoneWeightG || 0);
+  if (!(items >= 1) || !Number.isInteger(items)) return res.status(400).json({ message: 'Enter the number of items (1 or more).' });
+  if (!(gross > 0)) return res.status(400).json({ message: 'Enter the gross weight in grams.' });
+  if (isNaN(stone) || stone < 0 || stone >= gross) return res.status(400).json({ message: 'Stone weight must be less than the gross weight.' });
+  if (!(amount > 0)) return res.status(400).json({ message: 'Enter the valuation amount.' });
+  const net = Math.round((gross - stone) * 1000) / 1000;
+  Object.assign(b, { status: 'completed', valuationAmount: amount, itemCount: items, grossWeightG: gross, stoneWeightG: stone, netWeightG: net, completedAt: new Date() });
+  await b.save();
   await Valuer.updateOne({ sysId: b.valuerSysId }, { status: 'available' });
   await notify([`glo:${b.gloId}`, b.agencyId && `agency:${b.agencyId}`, 'ho'], 'completed', 'Valuation completed',
-    `${req.user.name} completed ${b.bookingId} (LAN ${b.lan}). Valuation: ${inr(amount)}. Please rate the valuer.`, b.bookingId);
+    `${req.user.name} completed ${b.refId || b.bookingId} (LAN ${b.lan}): ${items} item${items === 1 ? '' : 's'}, net ${net} g (gross ${gross} g, stone ${stone} g). Valuation: ${inr(amount)}. Please rate the valuer.`, b.bookingId);
   res.json(b);
 }));
 
@@ -470,7 +496,7 @@ async function seedDemo() {
   const pw = () => hashPassword(DEFAULT_PASSWORD);
   await HoUser.create({ userId: 'HO001', fullName: 'Head Office Admin', passwordHash: pw() });
   await Branch.insertMany(DEMO_BRANCHES.map(([code, area, lat, lng]) => ({
-    branchCode: code, branchName: `${area} Branch`, bankName: 'BMV Demo Bank', locality: `${area}, ${CITY}`, city: CITY,
+    branchCode: code, branchName: `${area} Branch`, bankName: DEMO_BANK, locality: `${area}, ${CITY}`, city: CITY,
     location: { type: 'Point', coordinates: [lng, lat] }, geofenceRadiusThreshold: '50', operatingHoursWindow: '09:30 AM - 04:30 PM'
   })));
   const glos = [];
@@ -500,6 +526,11 @@ app.post('/api/admin/reset-demo', auth('ho'), wrap(async (req, res) => res.json(
 mongoose.connection.once('open', async () => {
   try {
     if (!(await HoUser.countDocuments())) { console.log('No HO user found, seeding demo data.'); console.log(await seedDemo()); }
+    // Data upgrades: dummy bank name on branches, and a reference ID on older bookings
+    await Branch.updateMany({ $or: [{ bankName: 'BMV Demo Bank' }, { bankName: { $exists: false } }, { bankName: null }] }, { bankName: DEMO_BANK });
+    const missing = await Booking.find({ $or: [{ refId: { $exists: false } }, { refId: null }] }).sort({ requestedAt: 1 });
+    for (const b of missing) { b.refId = await nextRefId(b.requestedAt || b.timestamp || new Date()); await b.save(); }
+    if (missing.length) console.log(`Added reference IDs to ${missing.length} older bookings.`);
   } catch (e) { console.error('Seed failed:', e.message); }
 });
 
