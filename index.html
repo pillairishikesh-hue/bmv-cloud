@@ -345,19 +345,52 @@ function table(headers, rows) {
 }
 const C = {
   id: b => `<span class="font-mono text-slate-300">${esc(b.bookingId)}</span><div class="text-[10px] text-slate-500">${time(b.requestedAt)}</div>`,
-  lan: b => `<span class="font-mono">${esc(b.lan || '—')}</span>`,
+  lan: b => `<span class="font-mono">${esc(b.lan || '—')}</span><div class="text-[10px] font-mono text-slate-500">${esc(b.refId || '')}</div>`,
   branch: b => esc(branchName(b.branchCode)),
   valuer: b => `${esc(valuerName(b.valuerSysId))}<div class="text-[10px] text-slate-500">${esc(agencyName(b.agencyId))}</div>`,
-  gold: b => b.goldWeightGrams ? esc(b.goldWeightGrams) + ' g' : '—',
+  goods: b => b.netWeightG != null ? `${esc(b.itemCount)} item${b.itemCount === 1 ? '' : 's'} · <span class="font-semibold">${esc(b.netWeightG)} g net</span><div class="text-[10px] text-slate-500">Gross ${esc(b.grossWeightG)} g · Stone ${esc(b.stoneWeightG)} g</div>` : '—',
   status: b => pill(b.status) + (b.status === 'accepted' && b.etaMins ? `<div class="text-[10px] text-slate-500 mt-1">ETA ${esc(b.etaMins)} min</div>` : ''),
   value: b => `<span class="font-semibold">${inr(b.valuationAmount)}</span>`,
   rating: b => b.rating ? stars(b.rating) : '—'
 };
+// ---------- date filter ----------
+const DATE_PRESETS = [['all', 'All time'], ['today', 'Today'], ['yesterday', 'Yesterday'], ['this_week', 'This week'], ['last7', 'Last 7 days'], ['this_month', 'This month'], ['last30', 'Last 30 days']];
+let dateFilter = { preset: 'all', from: '', to: '' };
+const dayStart = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function dateRange(f) {
+  const t = dayStart(new Date());
+  switch (f.preset) {
+    case 'today': return [t, addDays(t, 1)];
+    case 'yesterday': return [addDays(t, -1), t];
+    case 'this_week': return [addDays(t, -((t.getDay() + 6) % 7)), addDays(t, 1)]; // week starts Monday
+    case 'last7': return [addDays(t, -6), addDays(t, 1)];
+    case 'this_month': return [new Date(t.getFullYear(), t.getMonth(), 1), addDays(t, 1)];
+    case 'last30': return [addDays(t, -29), addDays(t, 1)];
+    case 'custom': return [f.from ? dayStart(f.from + 'T00:00') : null, f.to ? addDays(dayStart(f.to + 'T00:00'), 1) : null];
+    default: return [null, null];
+  }
+}
+function applyDateFilter(list) { const [a, b] = dateRange(dateFilter); return list.filter(x => { const d = new Date(x.requestedAt); return (!a || d >= a) && (!b || d < b); }); }
+function dateFilterBar(shown, total) {
+  const [a, b] = dateRange(dateFilter);
+  const fmt = d => d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const label = dateFilter.preset === 'all' ? 'All time' : `${a ? fmt(a) : 'Start'} to ${b ? fmt(addDays(b, -1)) : 'today'}`;
+  const sum = shown.reduce((s, x) => s + (x.valuationAmount || 0), 0);
+  return `<div class="flex flex-wrap items-end gap-3 mb-4">
+    <div class="flex flex-wrap gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">${DATE_PRESETS.map(([k, l]) => `<button class="btn ${dateFilter.preset === k ? 'tab-on' : 'text-slate-400 hover:text-white'}" onclick="setDatePreset('${k}')">${l}</button>`).join('')}</div>
+    <div class="flex items-end gap-2"><div><label class="lbl" for="df-from">From</label><input id="df-from" data-keep type="date" class="inp" max="${ymd(new Date())}" value="${a ? ymd(a) : ''}" onchange="setDateCustom()"></div>
+      <div><label class="lbl" for="df-to">To</label><input id="df-to" data-keep type="date" class="inp" max="${ymd(new Date())}" value="${b ? ymd(addDays(b, -1)) : ''}" onchange="setDateCustom()"></div></div>
+    <div class="text-xs text-slate-400 md:ml-auto">${label} · <span class="text-slate-200 font-semibold">${shown.length}</span> of ${total} bookings · ${inr(sum)} valued</div></div>`;
+}
+window.setDatePreset = k => { dateFilter = { preset: k, from: '', to: '' }; refresh(); };
+window.setDateCustom = () => { dateFilter = { preset: 'custom', from: $('df-from').value, to: $('df-to').value }; if (document.activeElement) document.activeElement.blur(); refresh(); };
 function stat(label, value, sub = '') { return `<div class="card p-4"><div class="text-[11px] text-slate-400">${label}</div><div class="text-2xl font-bold mt-1">${value}</div><div class="text-[11px] text-slate-500">${sub}</div></div>`; }
 
 // ---------- GLO ----------
 async function viewBook() {
-  const lan = $('bk-lan')?.value || '', wt = $('bk-wt')?.value || '';
+  const lan = $('bk-lan')?.value || '';
   const m = await api('/matches');
   const rows = m.valuers.map(v => {
     const ok = v.status === 'available' && !v.blacklisted;
@@ -369,7 +402,7 @@ async function viewBook() {
     <div class="card p-5 space-y-4 h-fit">
       <div><div class="text-[11px] text-slate-400">Your branch</div><div class="font-bold">${esc(m.branch.branchName)}</div><div class="text-xs text-slate-400">${esc(m.branch.locality)} · ${esc(m.branch.branchCode)}</div></div>
       <div><label class="lbl">Loan account number (LAN) *</label><input id="bk-lan" data-keep class="inp font-mono" placeholder="e.g. GL2026001234" value="${esc(lan)}"></div>
-      <div><label class="lbl">Gold weight estimate (grams)</label><input id="bk-wt" data-keep type="number" class="inp" placeholder="e.g. 140" value="${esc(wt)}"></div>
+      <p class="text-[11px] text-slate-500">A reference ID is generated automatically for each request.</p>
       <p class="text-[11px] text-slate-500">Enter the LAN, then pick a valuer from the list. Valuers who declined your earlier requests are hidden${m.hiddenAfterRejection ? ` (${m.hiddenAfterRejection} hidden)` : ''}.</p>
     </div>
     <div class="card p-5 lg:col-span-2">
@@ -389,23 +422,24 @@ window.requestValuer = async sysId => {
   const lan = $('bk-lan').value.trim();
   if (!lan) { toast('LAN required', 'Enter the loan account number before requesting a valuer.', 'rejected'); $('bk-lan').focus(); return; }
   try {
-    await api('/bookings', { method: 'POST', body: { valuerSysId: sysId, lan, goldWeightGrams: $('bk-wt').value } });
-    $('bk-lan').value = ''; $('bk-wt').value = '';
+    await api('/bookings', { method: 'POST', body: { valuerSysId: sysId, lan } });
+    $('bk-lan').value = '';
     await poll(); refresh();
   } catch (err) { toast('Could not send request', err.message, 'rejected'); }
 };
 async function viewGloBookings() {
   const list = await api('/bookings');
   const live = list.filter(b => b.status === 'accepted' || b.status === 'arrived');
+  const shown = applyDateFilter(list);
   const liveCards = live.map(b => `<div class="card p-4 space-y-3 ${b.status === 'arrived' ? 'border-purple-500/50' : 'border-cyan-500/40'}">
-    <div class="flex justify-between items-start"><div><div class="text-[11px] text-slate-400">${esc(b.bookingId)} · LAN <span class="font-mono">${esc(b.lan)}</span></div><div class="font-bold">${esc(valuerName(b.valuerSysId))}</div><div class="text-[11px] text-slate-500">${esc(agencyName(b.agencyId))}</div></div>${pill(b.status)}</div>
+    <div class="flex justify-between items-start"><div><div class="text-[11px] text-slate-400">LAN <span class="font-mono">${esc(b.lan)}</span> · <span class="font-mono">${esc(b.refId || b.bookingId)}</span></div><div class="font-bold">${esc(valuerName(b.valuerSysId))}</div><div class="text-[11px] text-slate-500">${esc(agencyName(b.agencyId))}</div></div>${pill(b.status)}</div>
     <div id="gmap-${esc(b.bookingId)}" class="h-56 rounded-lg overflow-hidden"></div>
     <div id="ginfo-${esc(b.bookingId)}" class="text-xs text-slate-300">Loading live location…</div>
     ${b.status === 'arrived' ? `<button class="btn w-full bg-purple-600 hover:bg-purple-700 py-2.5" onclick="reviewCheckin('${esc(b.bookingId)}')">Review check-in &amp; start valuation</button>` : ''}
   </div>`).join('');
   $('view').innerHTML = (live.length ? `<h2 class="font-bold mb-3">Live tracking</h2><div class="grid md:grid-cols-2 gap-4 mb-6">${liveCards}</div>` : '') +
-    `<div class="card p-5"><h2 class="font-bold mb-3">Bookings at ${esc(session.branchName)}</h2>${table(['Booking', 'LAN', 'Valuer', 'Gold', 'Status', 'Valuation', 'Rating', ''],
-    bookingRows(list, [C.id, C.lan, C.valuer, C.gold, C.status, C.value, C.rating], b => b.status === 'completed' && !b.rating ? `<button class="btn bg-amber-500 hover:bg-amber-600 text-slate-950" onclick="rateBooking('${esc(b.bookingId)}')">Rate valuer</button>`
+    `<div class="card p-5"><h2 class="font-bold mb-3">Bookings at ${esc(session.branchName)}</h2>${dateFilterBar(shown, list.length)}${table(['Booking', 'LAN · Ref ID', 'Valuer', 'Items & weight', 'Status', 'Valuation', 'Rating', ''],
+    bookingRows(shown, [C.id, C.lan, C.valuer, C.goods, C.status, C.value, C.rating], b => b.status === 'completed' && !b.rating ? `<button class="btn bg-amber-500 hover:bg-amber-600 text-slate-950" onclick="rateBooking('${esc(b.bookingId)}')">Rate valuer</button>`
       : b.status === 'arrived' ? `<button class="btn bg-purple-600 hover:bg-purple-700" onclick="reviewCheckin('${esc(b.bookingId)}')">Review check-in</button>` : ''))}</div>`;
   live.forEach(b => trackBooking(b.bookingId, 'gmap-' + b.bookingId, 'ginfo-' + b.bookingId));
 }
@@ -497,9 +531,11 @@ window.setAvailability = async s => { try { await api('/valuers/me/status', { me
 async function viewValuerRequests() {
   const [head, list] = await Promise.all([valuerHeader(), api('/bookings')]);
   const open = list.filter(b => ACTIVE.includes(b.status));
+  valuerOpen = open;
   const cards = open.map(b => `<div class="card p-4 space-y-3 ${b.status === 'requested' ? 'border-amber-500/50' : b.status === 'accepted' ? 'border-cyan-500/40' : 'border-yellow-500/40'}">
     <div class="flex justify-between items-start"><div><div class="text-[11px] text-slate-400">${esc(b.bookingId)} · ${time(b.requestedAt)}</div><div class="font-bold text-lg">${esc(branchName(b.branchCode))}</div></div>${pill(b.status)}</div>
-    <div class="grid grid-cols-3 gap-2 text-xs"><div><div class="lbl">LAN</div><div class="font-mono">${esc(b.lan)}</div></div><div><div class="lbl">Gold</div>${C.gold(b)}</div><div><div class="lbl">Distance</div>${b.distanceKm ?? '—'} km</div></div>
+    <div class="grid grid-cols-2 gap-x-3 gap-y-3 text-xs"><div><div class="lbl">Bank</div><div class="font-semibold">${esc(b.bankName || '—')}</div></div><div><div class="lbl">GLO</div><div class="font-semibold">${esc(b.gloName || b.gloId)}</div></div>
+      <div><div class="lbl">LAN · Ref ID</div><div class="font-mono">${esc(b.lan)}</div><div class="font-mono text-[10px] text-slate-500">${esc(b.refId || '—')}</div></div><div><div class="lbl">Distance</div>${b.distanceKm ?? '—'} km</div></div>
     ${b.status === 'requested' ? `<div class="grid grid-cols-2 gap-2"><div><label class="lbl" for="eta-${esc(b.bookingId)}">ETA (min)</label><input id="eta-${esc(b.bookingId)}" data-keep type="number" min="1" class="inp" value="${Math.max(5, Math.round((b.distanceKm || 1) * 4))}"></div>
         <div><label class="lbl" for="trk-${esc(b.bookingId)}">Location sharing</label><select id="trk-${esc(b.bookingId)}" data-keep class="inp"><option value="simulated">Demo drive (60 s)</option><option value="gps">My phone's GPS</option></select></div></div>
         <div class="flex gap-2"><button class="btn flex-1 bg-emerald-600 hover:bg-emerald-700 py-2.5" onclick="acceptReq('${esc(b.bookingId)}')">Accept</button><button class="btn flex-1 bg-red-600/80 hover:bg-red-600 py-2.5" onclick="rejectReq('${esc(b.bookingId)}')">Decline</button></div>`
@@ -514,15 +550,33 @@ async function viewValuerRequests() {
 }
 window.acceptReq = async id => { try { await api(`/bookings/${id}/accept`, { method: 'POST', body: { etaMins: $('eta-' + id)?.value, trackingMode: $('trk-' + id)?.value } }); refresh(); } catch (e) { toast('Could not accept', e.message, 'rejected'); } };
 window.rejectReq = async id => { try { await api(`/bookings/${id}/reject`, { method: 'POST' }); refresh(); } catch (e) { toast('Could not decline', e.message, 'rejected'); } };
-window.completeReq = id => openModal('Valuation completed', `<form class="space-y-4">
-  <p class="text-xs text-slate-400">Enter the assessed value of the gold for booking ${esc(id)}.</p>
-  <div><label class="lbl">Valuation amount (₹) *</label><input name="amount" type="number" min="1" step="1" class="inp text-lg font-semibold" placeholder="e.g. 845000" required></div>
-  <p class="form-err text-xs text-red-400 hidden"></p>
-  <button type="submit" class="btn w-full bg-emerald-600 hover:bg-emerald-700 py-2.5">Submit valuation</button></form>`,
-  async fd => { await api(`/bookings/${id}/complete`, { method: 'POST', body: { valuationAmount: fd.get('amount') } }); refresh(); });
+let valuerOpen = [];
+window.completeReq = id => {
+  const b = valuerOpen.find(x => x.bookingId === id) || {};
+  openModal('Valuation completed', `<form class="space-y-4">
+    <p class="text-xs text-slate-400">Record the assessment for LAN <span class="font-mono">${esc(b.lan || '')}</span> (${esc(b.refId || id)}).</p>
+    <div class="grid grid-cols-2 gap-3">
+      <div><label class="lbl" for="vc-items">No. of items *</label><input id="vc-items" name="items" type="number" min="1" step="1" class="inp" placeholder="e.g. 4" required></div>
+      <div><label class="lbl" for="vc-gross">Gross weight (g) *</label><input id="vc-gross" name="gross" type="number" min="0.001" step="0.001" class="inp" placeholder="e.g. 52.400" required></div>
+      <div><label class="lbl" for="vc-stone">Stone weight (g)</label><input id="vc-stone" name="stone" type="number" min="0" step="0.001" class="inp" value="0"></div>
+      <div><label class="lbl" for="vc-net">Net weight (g)</label><input id="vc-net" class="inp font-semibold text-emerald-300" readonly tabindex="-1" placeholder="Gross minus stone"></div>
+    </div>
+    <div><label class="lbl" for="vc-amount">Valuation amount (₹) *</label><input id="vc-amount" name="amount" type="number" min="1" step="1" class="inp text-lg font-semibold" placeholder="e.g. 356000" required></div>
+    <p class="form-err text-xs text-red-400 hidden"></p>
+    <button type="submit" class="btn w-full bg-emerald-600 hover:bg-emerald-700 py-2.5">Submit valuation</button></form>`,
+    async fd => {
+      const gross = Number(fd.get('gross')), stone = Number(fd.get('stone') || 0);
+      if (!(stone < gross)) throw new Error('Stone weight must be less than the gross weight.');
+      await api(`/bookings/${id}/complete`, { method: 'POST', body: { itemCount: fd.get('items'), grossWeightG: gross, stoneWeightG: stone, valuationAmount: fd.get('amount') } });
+      refresh();
+    });
+  const calc = () => { const g = Number($('vc-gross').value), s = Number($('vc-stone').value || 0); $('vc-net').value = g > 0 && s >= 0 && s < g ? String(Math.round((g - s) * 1000) / 1000) : ''; };
+  $('vc-gross').oninput = calc; $('vc-stone').oninput = calc;
+};
 async function viewValuerHistory() {
   const [head, list] = await Promise.all([valuerHeader(), api('/bookings')]);
-  $('view').innerHTML = head + `<div class="card p-5">${table(['Booking', 'Branch', 'LAN', 'Gold', 'Status', 'Valuation', 'Rating'], bookingRows(list, [C.id, C.branch, C.lan, C.gold, C.status, C.value, C.rating]))}</div>`;
+  const shown = applyDateFilter(list);
+  $('view').innerHTML = head + `<div class="card p-5">${dateFilterBar(shown, list.length)}${table(['Booking', 'Branch', 'LAN · Ref ID', 'Items & weight', 'Status', 'Valuation', 'Rating'], bookingRows(shown, [C.id, C.branch, C.lan, C.goods, C.status, C.value, C.rating]))}</div>`;
 }
 
 // ---------- Agency ----------
@@ -536,7 +590,8 @@ async function viewAgencyTeam() {
 }
 async function viewAgencyBookings() {
   const list = await api('/bookings');
-  $('view').innerHTML = `<div class="card p-5"><h2 class="font-bold mb-3">Bookings for your valuers</h2>${table(['Booking', 'Branch', 'LAN', 'Valuer', 'Status', 'Valuation', 'Rating'], bookingRows(list, [C.id, C.branch, C.lan, C.valuer, C.status, C.value, C.rating]))}</div>`;
+  const shown = applyDateFilter(list);
+  $('view').innerHTML = `<div class="card p-5"><h2 class="font-bold mb-3">Bookings for your valuers</h2>${dateFilterBar(shown, list.length)}${table(['Booking', 'Branch', 'LAN · Ref ID', 'Valuer', 'Items & weight', 'Status', 'Valuation', 'Rating'], bookingRows(shown, [C.id, C.branch, C.lan, C.valuer, C.goods, C.status, C.value, C.rating]))}</div>`;
 }
 
 // ---------- HO ----------
@@ -568,7 +623,8 @@ window.resetDemo = () => openModal('Reset demo data?', `<form class="space-y-3">
   async () => { await api('/admin/reset-demo', { method: 'POST' }); toast('Demo data reset', '5 branches, 10 GLOs, 3 agencies and 20 valuers created.', 'completed'); refresh(); });
 async function viewHoBookings() {
   const list = await api('/bookings');
-  $('view').innerHTML = `<div class="card p-5"><h2 class="font-bold mb-3">All bookings</h2>${table(['Booking', 'Branch', 'GLO', 'LAN', 'Valuer', 'Gold', 'Status', 'Valuation', 'Rating'], bookingRows(list, [C.id, C.branch, b => esc(b.gloId), C.lan, C.valuer, C.gold, C.status, C.value, C.rating]))}</div>`;
+  const shown = applyDateFilter(list);
+  $('view').innerHTML = `<div class="card p-5"><h2 class="font-bold mb-3">All bookings</h2>${dateFilterBar(shown, list.length)}${table(['Booking', 'Branch', 'GLO', 'LAN · Ref ID', 'Valuer', 'Items & weight', 'Status', 'Valuation', 'Rating'], bookingRows(shown, [C.id, C.branch, b => `${esc(b.gloName || b.gloId)}<div class="text-[10px] font-mono text-slate-500">${esc(b.gloId)}</div>`, C.lan, C.valuer, C.goods, C.status, C.value, C.rating]))}</div>`;
 }
 async function viewCompliance() {
   const ratings = await api('/ratings');
