@@ -1,4 +1,4 @@
-// BookMyValuer API + web app server (v4: ref IDs, item weights, bank/GLO on requests)
+// BookMyValuer API + web app server (v5: HO-only onboarding, optional LAN)
 // Roles: ho (head office), glo (gold loan officer), valuer, agency
 const express = require('express');
 const mongoose = require('mongoose');
@@ -84,7 +84,7 @@ const HoUser = mongoose.model('HO', hoSchema);
 
 const bookingSchema = new mongoose.Schema({
   bookingId: { type: String, unique: true, required: true },
-  refId: String, // auto-generated reference for the LAN, e.g. REF-261127-0003
+  refId: String, // auto-generated reference for every request, e.g. REF-261127-0003
   branchCode: String,
   gloId: String,
   valuerSysId: String,
@@ -206,6 +206,8 @@ async function nextRefId(now = new Date()) {
   const n = last ? parseInt(last.refId.split('-')[2], 10) : 0;
   return `${prefix}-${String(n + 1).padStart(4, '0')}`;
 }
+// How a booking is named in messages: reference ID, plus the LAN when one was given
+const tag = b => b.lan ? `${b.refId || b.bookingId}, LAN ${b.lan}` : (b.refId || b.bookingId);
 const num = v => { const n = Number(String(v ?? '').replace(/[^0-9.]/g, '')); return isFinite(n) ? n : NaN; };
 
 // ---------- Auth ----------
@@ -234,20 +236,20 @@ app.get('/api/valuers', auth(), wrap(async (req, res) => {
   res.json((await Valuer.find(filter).sort({ sysId: 1 })).map(strip));
 }));
 
-// ---------- Onboarding (GLO and HO only) ----------
-app.post('/api/branches', auth('ho', 'glo'), wrap(async (req, res) => {
+// ---------- Onboarding (HO only) ----------
+app.post('/api/branches', auth('ho'), wrap(async (req, res) => {
   const b = await Branch.create(req.body);
   res.status(201).json(b);
 }));
-app.post('/api/glos', auth('ho', 'glo'), wrap(async (req, res) => {
+app.post('/api/glos', auth('ho'), wrap(async (req, res) => {
   const g = await GloUser.create({ ...req.body, passwordHash: hashPassword(req.body.password || DEFAULT_PASSWORD) });
   res.status(201).json(strip(g));
 }));
-app.post('/api/agencies', auth('ho', 'glo'), wrap(async (req, res) => {
+app.post('/api/agencies', auth('ho'), wrap(async (req, res) => {
   const a = await Agency.create({ ...req.body, passwordHash: hashPassword(req.body.password || DEFAULT_PASSWORD) });
   res.status(201).json(strip(a));
 }));
-app.post('/api/valuers', auth('ho', 'glo'), wrap(async (req, res) => {
+app.post('/api/valuers', auth('ho'), wrap(async (req, res) => {
   const v = await Valuer.create({ ...req.body, agencyId: req.body.agencyId || null, passwordHash: hashPassword(req.body.password || DEFAULT_PASSWORD) });
   res.status(201).json(strip(v));
 }));
@@ -285,7 +287,6 @@ app.get('/api/bookings', auth(), wrap(async (req, res) => {
 
 app.post('/api/bookings', auth('glo'), wrap(async (req, res) => {
   const { valuerSysId, lan } = req.body;
-  if (!lan || !String(lan).trim()) return res.status(400).json({ message: 'Loan Account Number (LAN) is required.' });
   const v = await Valuer.findOne({ sysId: valuerSysId });
   if (!v) return res.status(400).json({ message: 'Valuer not found.' });
   if (v.status !== 'available') return res.status(400).json({ message: `${v.name} is not available right now.` });
@@ -295,12 +296,12 @@ app.post('/api/bookings', auth('glo'), wrap(async (req, res) => {
   const booking = await Booking.create({
     bookingId: 'BK-' + Math.floor(100000 + Math.random() * 900000), refId: await nextRefId(),
     branchCode: branch.branchCode, gloId: req.user.id, valuerSysId: v.sysId, agencyId: v.agencyId,
-    lan: String(lan).trim(), distanceKm: Math.round(km(bLat, bLng, v.lat, v.lng) * 100) / 100
+    lan: String(lan || '').trim(), distanceKm: Math.round(km(bLat, bLng, v.lat, v.lng) * 100) / 100
   });
   v.status = 'engaged'; await v.save();
   await notify([`valuer:${v.sysId}`, v.agencyId && `agency:${v.agencyId}`, 'ho'], 'requested', 'New valuation request',
-    `${branch.bankName || DEMO_BANK}, ${branch.branchName}: LAN ${booking.lan} (${booking.refId}), ${booking.distanceKm} km away. Requested by ${req.user.name}.`, booking.bookingId);
-  await notify([`glo:${req.user.id}`], 'sent', 'Request sent', `${booking.refId} for LAN ${booking.lan} sent to ${v.name}. Waiting for them to accept.`, booking.bookingId);
+    `${branch.bankName || DEMO_BANK}, ${branch.branchName}: ${tag(booking)}, ${booking.distanceKm} km away. Requested by ${req.user.name}.`, booking.bookingId);
+  await notify([`glo:${req.user.id}`], 'sent', 'Request sent', `${tag(booking)} sent to ${v.name}. Waiting for them to accept.`, booking.bookingId);
   res.status(201).json(booking);
 }));
 
@@ -319,7 +320,7 @@ app.post('/api/bookings/:id/accept', auth('valuer'), wrap(async (req, res) => {
   b.startLat = v.lat; b.startLng = v.lng; b.trackingMode = req.body.trackingMode === 'gps' ? 'gps' : 'simulated';
   await b.save();
   await notify([`glo:${b.gloId}`, b.agencyId && `agency:${b.agencyId}`, 'ho'], 'accepted', 'Valuer accepted',
-    `${req.user.name} accepted ${b.bookingId} (LAN ${b.lan})${b.etaMins ? `, arriving in about ${b.etaMins} min` : ''}. Track them live on the map.`, b.bookingId);
+    `${req.user.name} accepted ${tag(b)}${b.etaMins ? `, arriving in about ${b.etaMins} min` : ''}. Track them live on the map.`, b.bookingId);
   res.json(b);
 }));
 
@@ -330,7 +331,7 @@ app.post('/api/bookings/:id/reject', auth('valuer'), wrap(async (req, res) => {
   const v = await Valuer.findOneAndUpdate({ sysId: b.valuerSysId }, { $inc: { rejectionsCount: 1 }, status: 'available' }, { new: true });
   if (v.rejectionsCount >= 3) await Valuer.updateOne({ sysId: v.sysId }, { $addToSet: { blacklistedBranchCodes: b.branchCode } });
   await notify([`glo:${b.gloId}`, b.agencyId && `agency:${b.agencyId}`, 'ho'], 'rejected', 'Valuer declined',
-    `${req.user.name} declined ${b.bookingId} (LAN ${b.lan}). Please book another valuer.`, b.bookingId);
+    `${req.user.name} declined ${tag(b)}. Please book another valuer.`, b.bookingId);
   res.json(b);
 }));
 
@@ -347,7 +348,7 @@ app.post('/api/bookings/:id/complete', auth('valuer'), wrap(async (req, res) => 
   await b.save();
   await Valuer.updateOne({ sysId: b.valuerSysId }, { status: 'available' });
   await notify([`glo:${b.gloId}`, b.agencyId && `agency:${b.agencyId}`, 'ho'], 'completed', 'Valuation completed',
-    `${req.user.name} completed ${b.refId || b.bookingId} (LAN ${b.lan}): ${items} item${items === 1 ? '' : 's'}, net ${net} g (gross ${gross} g, stone ${stone} g). Valuation: ${inr(amount)}. Please rate the valuer.`, b.bookingId);
+    `${req.user.name} completed ${tag(b)}: ${items} item${items === 1 ? '' : 's'}, net ${net} g (gross ${gross} g, stone ${stone} g). Valuation: ${inr(amount)}. Please rate the valuer.`, b.bookingId);
   res.json(b);
 }));
 
@@ -359,7 +360,7 @@ app.post('/api/bookings/:id/rate', auth('glo'), wrap(async (req, res) => {
   if (!(rating >= 1 && rating <= 5)) return res.status(400).json({ message: 'Rating must be 1 to 5 stars.' });
   b.rating = rating; b.ratingComment = req.body.comment || ''; b.ratedAt = new Date(); await b.save();
   await notify([`valuer:${b.valuerSysId}`, b.agencyId && `agency:${b.agencyId}`, 'ho'], 'rated', 'New rating',
-    `${req.user.name} rated ${b.bookingId} (LAN ${b.lan}) ${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}${b.ratingComment ? ': "' + b.ratingComment + '"' : ''}`, b.bookingId);
+    `${req.user.name} rated ${tag(b)} ${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}${b.ratingComment ? ': "' + b.ratingComment + '"' : ''}`, b.bookingId);
   res.json(b);
 }));
 
@@ -397,7 +398,7 @@ app.post('/api/valuers/me/face', auth('valuer'), wrap(async (req, res) => {
   await Valuer.updateOne({ sysId: req.user.id }, { facePhoto: photo, faceDescriptor: descriptor.map(Number) });
   res.json({ ok: true });
 }));
-app.post('/api/valuers/:id/face', auth('ho', 'glo'), wrap(async (req, res) => {
+app.post('/api/valuers/:id/face', auth('ho'), wrap(async (req, res) => {
   const { photo, descriptor } = req.body;
   if (!photo || !Array.isArray(descriptor) || descriptor.length !== 128) return res.status(400).json({ message: 'No face found in the photo.' });
   const r = await Valuer.updateOne({ sysId: req.params.id }, { facePhoto: photo, faceDescriptor: descriptor.map(Number) });
@@ -423,12 +424,12 @@ app.post('/api/bookings/:id/checkin', auth('valuer'), wrap(async (req, res) => {
   if (d > FACE_MATCH_THRESHOLD) {
     await b.save();
     await notify([`glo:${b.gloId}`, b.agencyId && `agency:${b.agencyId}`, 'ho'], 'face_failed', 'Face verification failed',
-      `Check-in for ${b.bookingId} (LAN ${b.lan}): the face did not match ${v.name}'s registered photo (match ${score}%). Attempt ${b.faceAttempts}.`, b.bookingId);
+      `Check-in for ${tag(b)}: the face did not match ${v.name}'s registered photo (match ${score}%). Attempt ${b.faceAttempts}.`, b.bookingId);
     return res.status(400).json({ message: `Face did not match your registered photo (match ${score}%). Please try again.` });
   }
   b.status = 'arrived'; b.arrivedAt = new Date(); b.checkinPhoto = req.body.photo; b.checkinDistanceM = distM; await b.save();
   await notify([`glo:${b.gloId}`, b.agencyId && `agency:${b.agencyId}`, 'ho'], 'arrived', 'Valuer arrived and verified',
-    `${v.name} checked in at ${branch.branchName} for ${b.bookingId} (LAN ${b.lan}). Face match ${score}%. Please confirm the check-in to start the valuation.`, b.bookingId);
+    `${v.name} checked in at ${branch.branchName} for ${tag(b)}. Face match ${score}%. Please confirm the check-in to start the valuation.`, b.bookingId);
   res.json({ ok: true, score });
 }));
 app.get('/api/bookings/:id/checkin-review', auth('glo', 'ho'), wrap(async (req, res) => {
@@ -444,7 +445,7 @@ app.post('/api/bookings/:id/confirm', auth('glo'), wrap(async (req, res) => {
   if (b.status !== 'arrived') return res.status(400).json({ message: 'The valuer has not checked in yet.' });
   b.status = 'in_progress'; b.startedAt = new Date(); await b.save();
   await notify([`valuer:${b.valuerSysId}`, b.agencyId && `agency:${b.agencyId}`, 'ho'], 'started', 'Check-in confirmed',
-    `${req.user.name} confirmed the check-in for ${b.bookingId} (LAN ${b.lan}). Valuation in progress.`, b.bookingId);
+    `${req.user.name} confirmed the check-in for ${tag(b)}. Valuation in progress.`, b.bookingId);
   res.json(b);
 }));
 
