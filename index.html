@@ -282,7 +282,7 @@ $('ratings-btn').onclick = () => showRatings();
 
 // ---------- app shell ----------
 const TABS = {
-  glo: [['book', 'Book a valuer', 'map-pin'], ['bookings', 'My bookings', 'list'], ['onboarding', 'Onboarding', 'user-plus']],
+  glo: [['book', 'Book a valuer', 'map-pin'], ['bookings', 'My bookings', 'list']],
   valuer: [['requests', 'My requests', 'bell'], ['history', 'History', 'history']],
   agency: [['team', 'My valuers', 'users'], ['bookings', 'Bookings', 'list']],
   ho: [['overview', 'Overview', 'layout-dashboard'], ['bookings', 'All bookings', 'list'], ['compliance', 'Risk & compliance', 'sliders'], ['onboarding', 'Onboarding', 'user-plus']]
@@ -313,7 +313,7 @@ async function refresh() {
   if (!session) return;
   try {
     await loadDirectory();
-    const views = { glo: { book: viewBook, bookings: viewGloBookings, onboarding: viewOnboarding }, valuer: { requests: viewValuerRequests, history: viewValuerHistory }, agency: { team: viewAgencyTeam, bookings: viewAgencyBookings }, ho: { overview: viewHoOverview, bookings: viewHoBookings, compliance: viewCompliance, onboarding: viewOnboarding } };
+    const views = { glo: { book: viewBook, bookings: viewGloBookings }, valuer: { requests: viewValuerRequests, history: viewValuerHistory }, agency: { team: viewAgencyTeam, bookings: viewAgencyBookings }, ho: { overview: viewHoOverview, bookings: viewHoBookings, compliance: viewCompliance, onboarding: viewOnboarding } };
     const active = document.activeElement;
     if (active && $('view').contains(active) && /INPUT|SELECT|TEXTAREA/.test(active.tagName) && active.dataset.keep !== undefined) return; // don't wipe a form being typed in
     cleanupMaps();
@@ -401,9 +401,9 @@ async function viewBook() {
   <div class="grid lg:grid-cols-3 gap-5">
     <div class="card p-5 space-y-4 h-fit">
       <div><div class="text-[11px] text-slate-400">Your branch</div><div class="font-bold">${esc(m.branch.branchName)}</div><div class="text-xs text-slate-400">${esc(m.branch.locality)} · ${esc(m.branch.branchCode)}</div></div>
-      <div><label class="lbl">Loan account number (LAN) *</label><input id="bk-lan" data-keep class="inp font-mono" placeholder="e.g. GL2026001234" value="${esc(lan)}"></div>
+      <div><label class="lbl">Loan account number (LAN), optional</label><input id="bk-lan" data-keep class="inp font-mono" placeholder="e.g. GL2026001234" value="${esc(lan)}"></div>
       <p class="text-[11px] text-slate-500">A reference ID is generated automatically for each request.</p>
-      <p class="text-[11px] text-slate-500">Enter the LAN, then pick a valuer from the list. Valuers who declined your earlier requests are hidden${m.hiddenAfterRejection ? ` (${m.hiddenAfterRejection} hidden)` : ''}.</p>
+      <p class="text-[11px] text-slate-500">Add the LAN if you have it, then pick a valuer from the list. Valuers who declined your earlier requests are hidden${m.hiddenAfterRejection ? ` (${m.hiddenAfterRejection} hidden)` : ''}.</p>
     </div>
     <div class="card p-5 lg:col-span-2">
       <div class="flex justify-between items-center mb-3"><h2 class="font-bold">Valuers near you</h2><span class="text-xs text-slate-400">${m.valuers.filter(v => v.status === 'available').length} available · sorted by distance</span></div>
@@ -420,7 +420,6 @@ async function viewBook() {
 }
 window.requestValuer = async sysId => {
   const lan = $('bk-lan').value.trim();
-  if (!lan) { toast('LAN required', 'Enter the loan account number before requesting a valuer.', 'rejected'); $('bk-lan').focus(); return; }
   try {
     await api('/bookings', { method: 'POST', body: { valuerSysId: sysId, lan } });
     $('bk-lan').value = '';
@@ -432,7 +431,7 @@ async function viewGloBookings() {
   const live = list.filter(b => b.status === 'accepted' || b.status === 'arrived');
   const shown = applyDateFilter(list);
   const liveCards = live.map(b => `<div class="card p-4 space-y-3 ${b.status === 'arrived' ? 'border-purple-500/50' : 'border-cyan-500/40'}">
-    <div class="flex justify-between items-start"><div><div class="text-[11px] text-slate-400">LAN <span class="font-mono">${esc(b.lan)}</span> · <span class="font-mono">${esc(b.refId || b.bookingId)}</span></div><div class="font-bold">${esc(valuerName(b.valuerSysId))}</div><div class="text-[11px] text-slate-500">${esc(agencyName(b.agencyId))}</div></div>${pill(b.status)}</div>
+    <div class="flex justify-between items-start"><div><div class="text-[11px] text-slate-400"><span class="font-mono">${esc(b.refId || b.bookingId)}</span>${b.lan ? ` · LAN <span class="font-mono">${esc(b.lan)}</span>` : ''}</div><div class="font-bold">${esc(valuerName(b.valuerSysId))}</div><div class="text-[11px] text-slate-500">${esc(agencyName(b.agencyId))}</div></div>${pill(b.status)}</div>
     <div id="gmap-${esc(b.bookingId)}" class="h-56 rounded-lg overflow-hidden"></div>
     <div id="ginfo-${esc(b.bookingId)}" class="text-xs text-slate-300">Loading live location…</div>
     ${b.status === 'arrived' ? `<button class="btn w-full bg-purple-600 hover:bg-purple-700 py-2.5" onclick="reviewCheckin('${esc(b.bookingId)}')">Review check-in &amp; start valuation</button>` : ''}
@@ -470,11 +469,11 @@ async function showRatings() {
   openModal('Valuer ratings', `<div class="space-y-2 text-xs">${rows.map(r => `<div class="flex justify-between items-center p-2 bg-slate-950 rounded-lg border border-slate-800"><div><div class="font-semibold">${esc(r.name)}</div><div class="text-[10px] text-slate-500">${esc(r.sysId)} · ${esc(agencyName(r.agencyId))} · ${r.completed} done</div></div><div class="text-right">${stars(r.avgRating)}<div class="text-[10px] text-slate-500">${r.ratingCount} rating${r.ratingCount === 1 ? '' : 's'}</div></div></div>`).join('')}</div>`);
 }
 
-// ---------- Onboarding (GLO + HO) ----------
+// ---------- Onboarding (HO only) ----------
 let pendingFace = null;
 window.onboardFace = async () => { const r = await captureFace('Valuer face photo', 'Take or upload a clear photo of the valuer. It is used to verify them at branch check-in.'); if (r) { pendingFace = r; if ($('ob-face-btn')) $('ob-face-btn').textContent = 'Face photo added ✓'; } };
 async function viewOnboarding() {
-  const branchOpts = cache.branches.map(b => `<option value="${esc(b.branchCode)}" ${session.branchCode === b.branchCode ? 'selected' : ''}>${esc(b.branchName)} (${esc(b.branchCode)})</option>`).join('');
+  const branchOpts = cache.branches.map(b => `<option value="${esc(b.branchCode)}">${esc(b.branchName)} (${esc(b.branchCode)})</option>`).join('');
   const agencyOpts = `<option value="">Independent (no agency)</option>` + cache.agencies.map(a => `<option value="${esc(a.agencyId)}">${esc(a.agencyName)}</option>`).join('');
   const f = (name, label, ph = '', req = false) => `<div><label class="lbl">${label}${req ? ' *' : ''}</label><input name="${name}" data-keep class="inp" placeholder="${ph}" ${req ? 'required' : ''}></div>`;
   const box = (key, title, color, fields) => `<form data-kind="${key}" class="card p-4 space-y-2.5"><div class="text-xs font-bold ${color} border-b border-slate-800 pb-2">${title}</div>${fields}<p class="form-err text-xs text-red-400 hidden"></p><button class="btn w-full bg-slate-800 hover:bg-slate-700">Save</button></form>`;
@@ -535,7 +534,7 @@ async function viewValuerRequests() {
   const cards = open.map(b => `<div class="card p-4 space-y-3 ${b.status === 'requested' ? 'border-amber-500/50' : b.status === 'accepted' ? 'border-cyan-500/40' : 'border-yellow-500/40'}">
     <div class="flex justify-between items-start"><div><div class="text-[11px] text-slate-400">${esc(b.bookingId)} · ${time(b.requestedAt)}</div><div class="font-bold text-lg">${esc(branchName(b.branchCode))}</div></div>${pill(b.status)}</div>
     <div class="grid grid-cols-2 gap-x-3 gap-y-3 text-xs"><div><div class="lbl">Bank</div><div class="font-semibold">${esc(b.bankName || '—')}</div></div><div><div class="lbl">GLO</div><div class="font-semibold">${esc(b.gloName || b.gloId)}</div></div>
-      <div><div class="lbl">LAN · Ref ID</div><div class="font-mono">${esc(b.lan)}</div><div class="font-mono text-[10px] text-slate-500">${esc(b.refId || '—')}</div></div><div><div class="lbl">Distance</div>${b.distanceKm ?? '—'} km</div></div>
+      <div><div class="lbl">LAN · Ref ID</div><div class="font-mono">${esc(b.lan || '—')}</div><div class="font-mono text-[10px] text-slate-500">${esc(b.refId || '—')}</div></div><div><div class="lbl">Distance</div>${b.distanceKm ?? '—'} km</div></div>
     ${b.status === 'requested' ? `<div class="grid grid-cols-2 gap-2"><div><label class="lbl" for="eta-${esc(b.bookingId)}">ETA (min)</label><input id="eta-${esc(b.bookingId)}" data-keep type="number" min="1" class="inp" value="${Math.max(5, Math.round((b.distanceKm || 1) * 4))}"></div>
         <div><label class="lbl" for="trk-${esc(b.bookingId)}">Location sharing</label><select id="trk-${esc(b.bookingId)}" data-keep class="inp"><option value="simulated">Demo drive (60 s)</option><option value="gps">My phone's GPS</option></select></div></div>
         <div class="flex gap-2"><button class="btn flex-1 bg-emerald-600 hover:bg-emerald-700 py-2.5" onclick="acceptReq('${esc(b.bookingId)}')">Accept</button><button class="btn flex-1 bg-red-600/80 hover:bg-red-600 py-2.5" onclick="rejectReq('${esc(b.bookingId)}')">Decline</button></div>`
@@ -554,7 +553,7 @@ let valuerOpen = [];
 window.completeReq = id => {
   const b = valuerOpen.find(x => x.bookingId === id) || {};
   openModal('Valuation completed', `<form class="space-y-4">
-    <p class="text-xs text-slate-400">Record the assessment for LAN <span class="font-mono">${esc(b.lan || '')}</span> (${esc(b.refId || id)}).</p>
+    <p class="text-xs text-slate-400">Record the assessment for ${esc(b.refId || id)}${b.lan ? ` (LAN <span class="font-mono">${esc(b.lan)}</span>)` : ''}.</p>
     <div class="grid grid-cols-2 gap-3">
       <div><label class="lbl" for="vc-items">No. of items *</label><input id="vc-items" name="items" type="number" min="1" step="1" class="inp" placeholder="e.g. 4" required></div>
       <div><label class="lbl" for="vc-gross">Gross weight (g) *</label><input id="vc-gross" name="gross" type="number" min="0.001" step="0.001" class="inp" placeholder="e.g. 52.400" required></div>
@@ -607,7 +606,7 @@ async function viewHoOverview() {
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">${stat('Branches', cache.branches.length, `${cache.glos.length} GLOs`)}${stat('Valuers', cache.valuers.length, `${cache.valuers.filter(v => v.status === 'available').length} available now`)}${stat('Agencies', cache.agencies.length, `${cache.valuers.filter(v => !v.agencyId).length} independent valuers`)}${stat('Value assessed', inr(total), `${done.length} completed valuations`)}</div>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">${stat('Awaiting valuer', by('requested'))}${stat('En route / on site', by('accepted') + by('arrived'), `${by('in_progress')} valuations in progress`)}${stat('Avg response time', avgResp == null ? '—' : avgResp + ' s', 'request to accept/decline')}${stat('Avg turnaround', avgTat == null ? '—' : avgTat + ' min', 'request to valuation completed')}</div>
   <div class="card p-3 mb-5"><div class="flex justify-between text-xs text-slate-400 mb-2 px-1"><span>Live network map · ${esc(cache.branches[0]?.city || '')}</span><span><span style="color:#10b981">●</span> available <span style="color:#eab308">●</span> on a job <span style="color:#22d3ee">●</span> en route <span style="color:#64748b">●</span> offline</span></div><div id="ho-map" class="h-96 rounded-lg overflow-hidden"></div></div>
-  <div class="card p-5"><h3 class="font-bold mb-3 text-sm">Latest bookings</h3>${table(['Booking', 'Branch', 'LAN', 'Valuer', 'Status', 'Valuation'], bookingRows(list.slice(0, 8), [C.id, C.branch, C.lan, C.valuer, C.status, C.value]))}</div>`;
+  <div class="card p-5"><h3 class="font-bold mb-3 text-sm">Latest bookings</h3>${table(['Booking', 'Branch', 'LAN · Ref ID', 'Valuer', 'Status', 'Valuation'], bookingRows(list.slice(0, 8), [C.id, C.branch, C.lan, C.valuer, C.status, C.value]))}</div>`;
   if (!cache.branches.length) return;
   const map = makeMap($('ho-map'), [cache.branches[0].location.coordinates[1], cache.branches[0].location.coordinates[0]], 12);
   const pts = [];
